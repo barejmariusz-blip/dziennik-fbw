@@ -195,6 +195,14 @@ nav.tabs button[aria-current="page"]{color:var(--fg);box-shadow:inset 0 3px 0 va
 .rtile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px;min-width:0}
 .rbar{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
 .rbar i{display:block;height:100%}
+
+.wbox{display:flex;flex-direction:column;gap:8px}
+.wrun{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px}
+.wrun b{font-family:var(--display);font-size:30px;font-weight:800;font-variant-numeric:tabular-nums;line-height:1}
+.wrun.paused b{color:var(--muted)}
+.lmode{display:flex;gap:4px;align-items:center;flex-wrap:wrap;font-size:12px;margin:2px 0 6px}
+.lmode button{border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}
+.lmode button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head><body>
@@ -348,7 +356,7 @@ const EXTRA_ROWS=[
  ['latpdv','Lat pulldown V-grip','Ściąganie wyciągu górnego wąskim uchwytem V','vpull','plecy:1 biceps:.5'],
  ['latpdsa','Single-arm lat pulldown','Ściąganie wyciągu górnego jednorącz','vpull','plecy:1 biceps:.4'],
  ['neutpu','Podciąganie neutralne','Podciąganie na drążku chwytem neutralnym (młotkowym)','vpull','plecy:1 biceps:.6 przedramiona:.3',1],
- ['assistpu','Podciąganie z asystą','Podciąganie na maszynie z odciążeniem','vpull','plecy:1 biceps:.5'],
+ ['assistpu','Podciąganie z asystą','Podciąganie na maszynie z odciążeniem','vpull','plecy:1 biceps:.5',2],
  ['machpd','Machine pulldown','Ściąganie na maszynie z dźwigniami','vpull','plecy:1 biceps:.4'],
  ['straightpd','Straight-arm pulldown','Ściąganie wyciągu górnego prostymi ramionami','vpull','plecy:1'],
  ['pullover','DB pullover','Przenoszenie hantla za głowę leżąc na ławce','iso','plecy:.8 klatka:.6 triceps:.3'],
@@ -466,7 +474,7 @@ const MLOW={czworoglowe:'czworogłowe uda',dwuglowe:'dwugłowe uda',posladki:'po
 for(const [id,name,pl,pattern,m,bw] of EXTRA_ROWS){
   const mus=pm(m); EX_MUSCLES[id]=mus;
   const focus=Object.entries(mus).filter(([,w])=>w>=.6).map(([k])=>MLOW[k]||k).join(', ');
-  EX[id]=[name,pattern,'',focus,bw?1:0]; PL[id]=pl;
+  EX[id]=[name,pattern,'',focus,bw||0]; PL[id]=pl;
 }
 // default muscle profile for user-made exercises, by movement pattern
 const PAT_MUSCLES={vpush:pm('barki:1 triceps:.5'),vpull:pm('plecy:1 biceps:.5'),hpush:pm('klatka:1 triceps:.6 barki:.4'),hpull:pm('plecy:1 biceps:.4 kaptury:.3'),knee:pm('czworoglowe:1 posladki:.7'),hip:pm('dwuglowe:1 posladki:.9 plecy:.4'),iso:{}};
@@ -543,7 +551,7 @@ try{const raw=localStorage.getItem(LS); if(raw){const o=JSON.parse(raw); if(o.S)
 try{const raw=localStorage.getItem(LSD); if(raw) DRAFT=JSON.parse(raw);}catch(e){}
 function normalize(){
   S.settings=Object.assign({inc:1.25,look:'classic',mode:'auto'},S.settings||{});
-  S.plans=S.plans||[]; S.customEx=S.customEx||{}; S.cycles=S.cycles||{}; S.swaps=S.swaps||{};
+  S.plans=S.plans||[]; S.customEx=S.customEx||{}; S.loadMode=S.loadMode||{}; S.cycles=S.cycles||{}; S.swaps=S.swaps||{};
   if(!S.activePlan||!allPlans().find(p=>p.id===S.activePlan)) S.activePlan='sz-'+(S.settings.days||3)+'-'+(S.settings.prio||1);
 }
 const lsSave=()=>{try{localStorage.setItem(LS,JSON.stringify({S,SESS}))}catch(e){}};
@@ -614,6 +622,14 @@ function slotsFor(tr){
   return (p.trainings[tr]||[]).map(sl=>({key:sl.key,def:sl.ex,cy:sl.cy,sets:sl.sets,exId:S.swaps[swapKey(p,sl.key)]||sl.ex}));
 }
 function curVer(sl){const n=S.cycles[sl.key]||0;return sl.cy[n%sl.cy.length]}
+// load kind (EX[...][4]): 0 = weight, 1 = bodyweight (+ added weight or − assistance), 2 = assisted machine (value = assistance)
+// kg is stored signed: assistance is negative, so "higher = better" holds everywhere (goal, records, last best)
+function loadKind(exId){return +((EXA(exId)||[])[4]||0)}
+function assistMode(exId){const k=loadKind(exId);return k===2||(k===1&&(S.loadMode||{})[exId]==='assist')}
+function showKg(exId,kg){if(isNaN(kg))return '?';if(kg<0)return 'asysta '+fmt(-kg)+' kg';const k=loadKind(exId);if(k&&kg===0)return k===2?'bez asysty':'masa ciała';return (k===1?'+':'')+fmt(kg)+' kg'}
+function shortKg(kg){return isNaN(kg)?'?':kg<0?'as.'+fmt(-kg):fmt(kg)}
+function goalTxt(exId,g){if(g===null)return 'pierwszy raz';if(assistMode(exId)||g<0)return g>=0?'bez asysty':'≤ '+fmt(-g)+' kg asysty';return '≥ '+(loadKind(exId)===1?'+':'')+fmt(g)+' kg'}
+function kgShown(exId,v){if(!assistMode(exId)||v==='')return v;const n=num(v);return isNaN(n)?v:fmt(Math.abs(n))}
 function lastFor(exId,ver){
   for(let i=SESS.length-1;i>=0;i--){const it=SESS[i].items.find(x=>x.exId===exId&&x.ver===ver);
     if(it){let best=null;for(const s of it.sets){if(!isNaN(s.kg)&&(best===null||s.kg>best.kg||(s.kg===best.kg&&s.reps>best.reps)))best=s}
@@ -621,9 +637,12 @@ function lastFor(exId,ver){
   return null;
 }
 function goalFor(exId,ver){const l=lastFor(exId,ver);return l?l.kg+Number(S.settings.inc||1.25):null}
-function draftHasData(){return !!DRAFT&&DRAFT.items.some(it=>it.sets.some(s=>s.done||s.kg!==''||s.reps!==''))}
+function draftHasData(){return !!DRAFT&&(!!DRAFT.startedAt||DRAFT.items.some(it=>it.sets.some(s=>s.done||s.kg!==''||s.reps!=='')))}
+function wElapsed(){if(!DRAFT||!DRAFT.startedAt)return 0;const end=DRAFT.pausedAt||Date.now();return Math.max(0,end-DRAFT.startedAt-(DRAFT.pausedMs||0))}
+const fmtClock=ms=>{const t=Math.floor(ms/1000),h=Math.floor(t/3600),m=Math.floor(t%3600/60),x=t%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(x).padStart(2,'0')};
+const fmtDur=ms=>{const m=Math.round(ms/60000);return m>=60?Math.floor(m/60)+' h '+(m%60)+' min':m+' min'};
 function buildDraft(tr){
-  DRAFT={v:3,plan:S.activePlan,tr,date:null,items:slotsFor(tr).map(sl=>({key:sl.key,def:sl.def,cy:sl.cy,exId:sl.exId,ver:curVer(sl),sets:Array.from({length:sl.sets},()=>({kg:'',reps:'',done:false}))}))};
+  DRAFT={v:3,plan:S.activePlan,tr,date:null,startedAt:null,pausedAt:null,pausedMs:0,items:slotsFor(tr).map(sl=>({key:sl.key,def:sl.def,cy:sl.cy,exId:sl.exId,ver:curVer(sl),sets:Array.from({length:sl.sets},()=>({kg:'',reps:'',done:false}))}))};
 }
 function ensureDraft(){
   if(DRAFT&&(DRAFT.v!==3||DRAFT.plan!==S.activePlan||!trainings().includes(DRAFT.tr))&&!draftHasData()) DRAFT=null;
@@ -664,6 +683,11 @@ function viewToday(){
     <div class="strip">${strip}</div>
     <span class="muted" style="font-size:12px">Dotknij ${p.schedule?'dzień w rozkładzie':'pozycję w kolejności'}, żeby ustawić, gdzie jesteś w planie.</span>
   </section>
+  ${ui.posAsk!=null?(()=>{const k=ui.posAsk,t=s[k];return `<div class="notice"><b>Ustawić ${esc(t)} jako kolejny trening?</b><span>${draftHasData()?`Bieżący trening ${esc(tr)} zostaje z wpisanymi seriami i licznikiem. Zmieni się tylko kolejność planu.`:'Zmieni się miejsce w planie, od którego liczą się kolejne treningi.'}</span><div class="row"><button type="button" class="btn" data-act="posYes">Ustaw ${esc(t)}</button><button type="button" class="btn ghost" data-act="posNo">Anuluj</button></div></div>`})():''}
+  <div class="wbox">${!DRAFT.startedAt?`<button type="button" class="btn wide" data-act="wStart">▶ Rozpocznij trening ${esc(tr)}</button>`:
+    `<div class="wrun${DRAFT.pausedAt?' paused':''}"><div><div class="label">Czas treningu${DRAFT.pausedAt?' · pauza':''}</div><b id="wClock">${fmtClock(wElapsed())}</b></div>
+      <div class="row"><button type="button" class="sbtn" data-act="wPause">${DRAFT.pausedAt?'▶ Wznów':'⏸ Pauza'}</button><button type="button" class="sbtn" data-act="wResetAsk">↺ Reset</button></div></div>`}
+    ${ui.wResetAsk?`<div class="notice"><b>Wyzerować trening ${esc(tr)}?</b><span>Wpisane serie i licznik zostaną usunięte. Plan i cykle wersji się nie zmienią.</span><div class="row"><button type="button" class="btn danger" data-act="wReset">Wyzeruj</button><button type="button" class="btn ghost" data-act="wResetNo">Anuluj</button></div></div>`:''}</div>
   <div class="datebox"><div><div class="label">Data treningu</div><b>${dateTxt}</b></div>
     ${ui.dateEdit?`<div class="row"><input type="date" id="trDate" value="${DRAFT.date||isoDay(Date.now())}" max="${isoDay(Date.now())}" aria-label="Data treningu"><button type="button" class="sbtn" data-act="dateToday">Dziś</button></div>`:`<button type="button" class="link" data-act="dateEdit">Zmień</button>`}</div>`;
   if(SESS.length){
@@ -694,6 +718,7 @@ function viewToday(){
         <div class="ex-name">${esc(e[0])}</div>
         <div class="ex-pl">${esc(exPL(it.exId))}</div>
         ${recNow?`<div class="mchips">${musclesOf(it.exId).map(m=>{const r=recNow[m];return `<span class="mchip" style="--c:${recColor(r.pct)}" title="Gotowość ${r.pct}%">${MUSCLE_NAME[m]} ${r.pct}%</span>`}).join('')}</div>`:''}
+        ${loadKind(it.exId)===1?`<div class="lmode" role="group" aria-label="Rodzaj obciążenia"><span class="muted">Masa ciała:</span><button type="button" data-act="lmode" data-i="${idx}" data-v="add" aria-pressed="${!assistMode(it.exId)}">+ obciążenie</button><button type="button" data-act="lmode" data-i="${idx}" data-v="assist" aria-pressed="${assistMode(it.exId)}">− asysta</button></div>`:loadKind(it.exId)===2?`<div class="lmode"><span class="muted">Wpisujesz kg asysty. Im mniej, tym lepiej.</span></div>`:''}
         <div class="ex-meta"><span>${esc(e[3]||'')}</span>${vid?`<a href="${esc(vid)}" target="_blank" rel="noopener">Instruktaż ▸</a>`:''}</div>
       </div>
       <button type="button" class="ver v-${it.ver}" data-act="vpick" data-i="${idx}" aria-label="Wersja ${it.ver}, zmień">${it.ver}<small>${it.sets.length} ${it.sets.length===1?'SERIA':it.sets.length<5?'SERIE':'SERII'}</small></button></div>
@@ -701,13 +726,13 @@ function viewToday(){
       <div class="cyc"><span>Cykl:</span>${cyc}</div>
       <div class="target">
         <div><div class="label">Powtórzenia</div><div class="v">${v.reps}</div></div>
-        <div><div class="label">Ostatnio ${it.ver}</div><div class="v">${last?fmt(last.kg)+' kg × '+(isNaN(last.reps)?'?':last.reps):'—'}</div>${last?`<div class="muted">${dstr(last.date)}</div>`:''}</div>
-        <div class="goal"><div class="label">Cel dziś</div><div class="v">${goal!==null?'≥ '+fmt(goal)+' kg':'pierwszy raz'}</div><div class="muted">przerwa ${v.rest}</div></div>
+        <div><div class="label">Ostatnio ${it.ver}</div><div class="v">${last?showKg(it.exId,last.kg)+' × '+(isNaN(last.reps)?'?':last.reps):'—'}</div>${last?`<div class="muted">${dstr(last.date)}</div>`:''}</div>
+        <div class="goal"><div class="label">Cel dziś</div><div class="v">${goalTxt(it.exId,goal)}</div><div class="muted">przerwa ${v.rest}</div></div>
       </div>
       <div class="sets">${it.sets.map((st,si)=>`<div class="set${st.done?' done':''}">
         <span class="n">${si+1}</span>
         <div class="kgbox"><button type="button" class="stp" data-act="kgStep" data-d="-1" data-i="${idx}" data-s="${si}" aria-label="Mniej kg">−</button>
-          <label class="inp"><input id="kg-${idx}-${si}" inputmode="decimal" autocomplete="off" aria-label="Ciężar seria ${si+1}" data-i="${idx}" data-s="${si}" data-f="kg" value="${esc(st.kg)}" placeholder="${goal!==null?fmt(goal):(e[4]?'0':'kg')}"><span>kg</span></label>
+          <label class="inp"><input id="kg-${idx}-${si}" inputmode="decimal" autocomplete="off" aria-label="Ciężar seria ${si+1}" data-i="${idx}" data-s="${si}" data-f="kg" data-as="${assistMode(it.exId)?1:0}" value="${esc(kgShown(it.exId,st.kg))}" placeholder="${assistMode(it.exId)?(goal!==null?fmt(Math.max(0,-goal)):'asysta'):(goal!==null?fmt(goal):(e[4]?'0':'kg'))}"><span>${assistMode(it.exId)?'as.':'kg'}</span></label>
           <button type="button" class="stp" data-act="kgStep" data-d="1" data-i="${idx}" data-s="${si}" aria-label="Więcej kg">+</button></div>
         <span class="x">×</span>
         <label class="inp"><input id="rp-${idx}-${si}" inputmode="numeric" autocomplete="off" aria-label="Powtórzenia seria ${si+1}" data-i="${idx}" data-s="${si}" data-f="reps" value="${esc(st.reps)}" placeholder="pow."><span></span></label>
@@ -733,15 +758,15 @@ function viewHistory(){
       const ent=SESS.flatMap(s=>s.items.filter(i=>i.exId===id&&i.ver===v).map(i=>({d:s.date,kg:Math.max(...i.sets.map(x=>isNaN(x.kg)?-Infinity:x.kg))}))).filter(x=>isFinite(x.kg));
       if(!ent.length) return '';
       const l=ent[ent.length-1], best=Math.max(...ent.map(x=>x.kg));
-      return `<tr><td>${vBadge(v)}</td><td>${fmt(l.kg)} kg</td><td>${fmt(best)} kg</td><td>${ent.length}</td><td>${dstr(l.d)}</td></tr>`;
+      return `<tr><td>${vBadge(v)}</td><td>${showKg(id,l.kg)}</td><td>${showKg(id,best)}</td><td>${ent.length}</td><td>${dstr(l.d)}</td></tr>`;
     }).join('');
     if(rows) html+=`<div><b>${esc(exName(id))}</b><div class="tbl"><table><thead><tr><th>Wersja</th><th>Ostatnio</th><th>Rekord</th><th>Razy</th><th>Data</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   }
   html+=`</div></details>`;
   for(const s of [...SESS].reverse()){
     const pn=(allPlans().find(p=>p.id===s.plan)||{}).name||(s.days?`${s.days} dni / P${s.prio}`:'');
-    html+=`<article class="sess"><div class="sess-h"><b>${esc(s.tr)}</b><span class="muted">${dlong(s.date)} · ${esc(pn)}</span></div>
-      <ul>${s.items.map(i=>`<li>${vBadge(i.ver)}<span><span>${esc(exName(i.exId))}</span> <span class="s">${i.sets.length?i.sets.map(x=>(isNaN(x.kg)?'?':fmt(x.kg))+'×'+(isNaN(x.reps)?'?':x.reps)).join(', '):'zrobione, bez zapisu serii'}</span></span></li>`).join('')}</ul>
+    html+=`<article class="sess"><div class="sess-h"><b>${esc(s.tr)}</b><span class="muted">${dlong(s.date)} · ${esc(pn)}${s.dur?' · '+fmtDur(s.dur):''}</span></div>
+      <ul>${s.items.map(i=>`<li>${vBadge(i.ver)}<span><span>${esc(exName(i.exId))}</span> <span class="s">${i.sets.length?i.sets.map(x=>shortKg(x.kg)+'×'+(isNaN(x.reps)?'?':x.reps)).join(', '):'zrobione, bez zapisu serii'}</span></span></li>`).join('')}</ul>
       ${ui.delId===s.id?`<div class="row"><span class="muted">Usunąć ten trening? Cykle cofną się o jeden krok.</span><button type="button" class="btn danger" data-act="delYes" data-id="${s.id}">Usuń</button><button type="button" class="btn ghost" data-act="delNo">Anuluj</button></div>`:`<div><button type="button" class="link" data-act="del" data-id="${s.id}">Usuń trening</button></div>`}
     </article>`;
   }
@@ -787,7 +812,7 @@ function viewEditor(p){
       <select id="nx-pat">${Object.keys(PAT).map(k=>`<option value="${k}">${PAT[k]}</option>`).join('')}</select>
       <select id="nx-mus" aria-label="Główna partia"><option value="">Główna partia: według rodzaju ruchu</option>${MUSCLES.map(m=>`<option value="${m}">Główna partia: ${MUSCLE_NAME[m]}</option>`).join('')}</select>
       <input type="text" id="nx-vid" placeholder="Link do instruktażu (opcjonalnie)">
-      <label class="row" style="font-size:14px"><input type="checkbox" id="nx-bw"> masa ciała (ciężar to obciążenie dodatkowe)</label>
+      <select id="nx-kind" aria-label="Rodzaj obciążenia"><option value="0">Ciężar (sztanga, hantle, maszyna, wyciąg)</option><option value="1">Masa ciała (+ obciążenie albo − asysta)</option><option value="2">Maszyna z asystą (mniej kg = lepiej)</option></select>
       <div class="row"><button type="button" class="sbtn acc" data-act="nxSave">Dodaj ćwiczenie</button><button type="button" class="sbtn" data-act="nxCancel">Anuluj</button></div></div>`;
   }else h+=`<div><button type="button" class="sbtn" data-act="nxOpen">+ własne ćwiczenie do bazy</button></div>`;
   h+=ui.delPlan===p.id?`<div class="row"><span>Usunąć plan „${esc(p.name)}”? Historia zostaje.</span><button type="button" class="btn danger" data-act="planDelYes">Usuń plan</button><button type="button" class="btn ghost" data-act="planDelNo">Anuluj</button></div>`:`<div><button type="button" class="link" data-act="planDel" style="color:var(--hd)">Usuń ten plan</button></div>`;
@@ -884,9 +909,9 @@ async function exportJson(){
 }
 async function exportCsv(){
   const q2=v=>{v=String(v);return /[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
-  const rows=[['Data','Trening','Plan','Ćwiczenie','Wersja','Seria','Ciężar kg','Powtórzenia']];
+  const rows=[['Data','Trening','Plan','Ćwiczenie','Wersja','Seria','Ciężar kg (ujemny = asysta)','Powtórzenia','Czas treningu min']];
   for(const s of SESS){const d=new Date(s.date).toLocaleDateString('pl-PL'), pn=(allPlans().find(p=>p.id===s.plan)||{}).name||(s.days?s.days+' dni P'+s.prio:'');
-    for(const it of s.items) it.sets.forEach((x,i)=>rows.push([d,s.tr,pn,exName(it.exId),it.ver,i+1,isNaN(x.kg)?'':fmt(x.kg),isNaN(x.reps)?'':x.reps]))}
+    for(const it of s.items) it.sets.forEach((x,i)=>rows.push([d,s.tr,pn,exName(it.exId),it.ver,i+1,isNaN(x.kg)?'':fmt(x.kg),isNaN(x.reps)?'':x.reps,s.dur?Math.round(s.dur/60000):'']))}
   const r=await saveFile('dziennik-fbw-'+stamp()+'.csv','﻿'+rows.map(r=>r.map(q2).join(';')).join('\r\n'),'text/csv');
   if(r==='ok') toast('Plik CSV zapisany w Pobranych'); else if(r==='fail') toast('Nie udało się zapisać pliku');
 }
@@ -917,13 +942,14 @@ function finish(){
   const when=DRAFT.date?new Date(DRAFT.date+'T12:00').getTime():Date.now();
   const p=plan();
   const sess={id:rid('s'),date:when,tr:DRAFT.tr,plan:p.id,days:p.days,prio:p.prio,seqStep:step,items};
+  if(DRAFT.startedAt) sess.dur=wElapsed();
   for(const it of items) S.cycles[it.key]=(S.cycles[it.key]||0)+1;
   S.seqPos+=step;
   SESS.push(sess); SESS.sort((x,y)=>x.date-y.date);
   persist(); cloudDo(()=>prof().collection('sessions').doc(sess.id).set(sess));
   DRAFT=null; draftSave(); ui={}; try{wake&&wake.release()}catch(e){} try{window.Android&&Android.keepAwake&&Android.keepAwake(false)}catch(e){}
   ensureDraft(); render(); window.scrollTo(0,0);
-  toast(`Zapisano ${sess.tr}. Następny: ${nextTr()}`);
+  toast(`Zapisano ${sess.tr}${sess.dur?' ('+fmtDur(sess.dur)+')':''}. Następny: ${nextTr()}`);
 }
 document.addEventListener('click',e=>{
   const el=e.target.closest('[data-act],[data-tab]'); if(!el) return;
@@ -933,8 +959,18 @@ document.addEventListener('click',e=>{
     case 'pickTr': {const t=el.dataset.tr; if(t===DRAFT.tr) return; if(draftHasData()){ui.switchTo=t}else{buildDraft(t);draftSave()} break}
     case 'switchYes': buildDraft(ui.switchTo); ui.switchTo=null; draftSave(); break;
     case 'switchNo': ui.switchTo=null; break;
-    case 'setPos': {const L=seq().length, k=+el.dataset.k; S.seqPos=S.seqPos-(S.seqPos%L)+k; S.settings.chosen=true;
+    case 'setPos': {const k=+el.dataset.k; if(k===S.seqPos%seq().length&&!ui.posAsk) return; ui.posAsk=k; break}
+    case 'posNo': ui.posAsk=null; break;
+    case 'posYes': {const L=seq().length, k=ui.posAsk; ui.posAsk=null; S.seqPos=S.seqPos-(S.seqPos%L)+k; S.settings.chosen=true;
       resetDraftIfEmpty(); persist(); ensureDraft(); draftSave(); toast(`Kolejny trening: ${nextTr()}`); break}
+    case 'wStart': DRAFT.startedAt=Date.now(); DRAFT.pausedAt=null; DRAFT.pausedMs=0; draftSave(); keepAwake(); break;
+    case 'wPause': if(DRAFT.pausedAt){DRAFT.pausedMs=(DRAFT.pausedMs||0)+(Date.now()-DRAFT.pausedAt);DRAFT.pausedAt=null}else DRAFT.pausedAt=Date.now(); draftSave(); break;
+    case 'wResetAsk': ui.wResetAsk=true; break;
+    case 'wResetNo': ui.wResetAsk=false; break;
+    case 'wReset': {const t=DRAFT.tr; buildDraft(t); ui.wResetAsk=false; T=null; clearInterval(tInt); $('#timer').hidden=true; draftSave(); toast('Trening '+t+' wyzerowany'); break}
+    case 'lmode': {const it=DRAFT.items[i], v=el.dataset.v; if(v==='assist') S.loadMode[it.exId]='assist'; else delete S.loadMode[it.exId];
+      for(const st of it.sets){const n=num(st.kg); if(!isNaN(n)&&n!==0&&((v==='assist')!==(n<0))) st.kg=fmt(-n)}
+      persist(); draftSave(); break}
     case 'dateEdit': ui.dateEdit=true; break;
     case 'goRecovery': tab='history'; ui={hview:'rec'}; render(); window.scrollTo(0,0); return;
     case 'hview': ui.hview=el.dataset.v; break;
@@ -943,10 +979,14 @@ document.addEventListener('click',e=>{
     case 'setVer': {const it=DRAFT.items[i], v=el.dataset.v, n=S.cycles[it.key]||0, L=it.cy.length, idx=it.cy.indexOf(v);
       S.cycles[it.key]=n-(n%L)+idx; it.ver=v; ui.vpick=null; persist(); draftSave(); toast(`${exName(it.exId)}: wersja ${v}`); break}
     case 'kgStep': {const it=DRAFT.items[i], st=it.sets[+el.dataset.s], inc=Number(S.settings.inc||1.25);
-      let base=num(st.kg); if(isNaN(base)){const g=goalFor(it.exId,it.ver); if(g!==null){st.kg=fmt(g);draftSave();break} base=0}
-      st.kg=fmt(Math.max(0,base+inc*(+el.dataset.d))); draftSave(); break}
+      const as=assistMode(it.exId);
+      let base=num(st.kg); if(isNaN(base)){const g=goalFor(it.exId,it.ver); if(g!==null){st.kg=as&&g>0?'0':fmt(g);draftSave();break} base=0}
+      if(as){const nv=Math.max(0,Math.abs(base)+inc*(+el.dataset.d)); st.kg=nv?fmt(-nv):'0'} // stepper works on the shown assistance
+      else st.kg=fmt(Math.max(0,base+inc*(+el.dataset.d)));
+      draftSave(); break}
     case 'tick': {const it=DRAFT.items[i], st=it.sets[+el.dataset.s];
-      if(!st.done){ if(st.kg===''){const g=goalFor(it.exId,it.ver); if(g!==null) st.kg=fmt(g); else if((EXA(it.exId)||[])[4]) st.kg='0'} st.done=true; startTimer(it.ver); keepAwake(); }
+      if(!st.done){ if(st.kg===''){const g=goalFor(it.exId,it.ver); if(g!==null) st.kg=(assistMode(it.exId)&&g>0)?'0':fmt(g); else if(loadKind(it.exId)) st.kg='0'} st.done=true; startTimer(it.ver); keepAwake();
+        if(!DRAFT.startedAt&&!DRAFT.hinted){DRAFT.hinted=1;toast('Licznik treningu stoi. Włącz go przyciskiem Rozpocznij.')} }
       else st.done=false;
       draftSave(); break}
     case 'addSet': DRAFT.items[i].sets.push({kg:'',reps:'',done:false}); draftSave(); break;
@@ -979,7 +1019,7 @@ document.addEventListener('click',e=>{
     case 'nxOpen': ui.newEx=true; break;
     case 'nxCancel': ui.newEx=false; break;
     case 'nxSave': {const name=$('#nx-name').value.trim(); if(!name){toast('Wpisz nazwę ćwiczenia');return}
-      const id=rid('x'); S.customEx[id]=[name,$('#nx-pat').value,$('#nx-vid').value.trim(),'',$('#nx-bw').checked?1:0,$('#nx-pl').value.trim(),$('#nx-mus').value?{[$('#nx-mus').value]:1}:null];
+      const id=rid('x'); S.customEx[id]=[name,$('#nx-pat').value,$('#nx-vid').value.trim(),'',parseInt($('#nx-kind').value,10)||0,$('#nx-pl').value.trim(),$('#nx-mus').value?{[$('#nx-mus').value]:1}:null];
       ui.newEx=false; persist(); toast('Dodano „'+name+'” do bazy ćwiczeń'); break}
     case 'planDel': ui.delPlan=ui.edit; break;
     case 'planDelNo': ui.delPlan=null; break;
@@ -1003,7 +1043,8 @@ document.addEventListener('click',e=>{
 });
 document.addEventListener('input',e=>{
   const t=e.target;
-  if(t.dataset&&t.dataset.f&&DRAFT){DRAFT.items[+t.dataset.i].sets[+t.dataset.s][t.dataset.f]=t.value; draftSave()}
+  if(t.dataset&&t.dataset.f&&DRAFT){let v=t.value; if(t.dataset.f==='kg'&&t.dataset.as==='1'){v=v.trim().replace(/^-/,''); if(v!==''&&num(v)!==0) v='-'+v}
+    DRAFT.items[+t.dataset.i].sets[+t.dataset.s][t.dataset.f]=v; draftSave()}
   if(t.id==='inc'){const v=num(t.value); if(v>0){S.settings.inc=v; clearTimeout(t._h); t._h=setTimeout(persist,600)}}
   if(t.dataset&&t.dataset.ed){const p=editPlan(); if(!p) return; const ed=t.dataset.ed;
     if(ed==='name'){p.name=t.value; clearTimeout(t._h); t._h=setTimeout(persist,600)}
@@ -1034,6 +1075,7 @@ document.addEventListener('change',e=>{
   }
 });
 
+setInterval(()=>{const el=document.getElementById('wClock'); if(el&&DRAFT&&DRAFT.startedAt&&!DRAFT.pausedAt) el.textContent=fmtClock(wElapsed())},1000);
 normalize();
 applyLook();
 render();
