@@ -808,6 +808,13 @@ function lastFor(exId,ver){
 }
 function repRange(it){if(it.reps)return it.sets.length+' × '+it.reps;if(!REP_OPTS[it.ver])return (VERS[it.ver]||VERS.LP).reps;return S.repPick[it.exId+'|'+it.ver]||REP_DEF[it.ver]}
 function itemInc(it){return it&&it.inc!=null?Number(it.inc):Number(S.settings.inc||1.25)}
+// Weight goes up once per block of 4 executions of the exercise (4 = longest version cycle).
+// 4-version cycles: +inc on every return to a version. 2-version cycles (VC/VD): only every 2nd return.
+// Plans with their own increment (linear progression) and the literal PDF rule ("version") keep +inc each time.
+function incFor(it){const base=itemInc(it);
+  if(!it||it.inc!=null||S.settings.prog==='version'||!it.cy||it.cy.length>=4) return base;
+  const n=S.cycles[it.key]||0, L=it.cy.length; if(n<L) return base;
+  return Math.floor((n-L)/4)===Math.floor(n/4)?0:base}
 function goalFor(exId,ver,inc){const l=lastFor(exId,ver);return l?l.kg+(inc==null?Number(S.settings.inc||1.25):inc):null}
 function draftHasData(){return !!DRAFT&&(!!DRAFT.startedAt||DRAFT.items.some(it=>it.sets.some(s=>s.done||s.kg!==''||s.reps!==''))||(DRAFT.cardio||[]).some(c=>c.done||c.tmin!==''||c.km!==''))}
 function wElapsed(){if(!DRAFT||!DRAFT.startedAt)return 0;const end=DRAFT.pausedAt||Date.now();return Math.max(0,end-DRAFT.startedAt-(DRAFT.pausedMs||0))}
@@ -932,7 +939,7 @@ function viewToday(){
   }
   const recNow=SESS.length?Object.fromEntries(recovery().map(r=>[r.m,r])):null;
   DRAFT.items.forEach((it,idx)=>{
-    const e=EXA(it.exId)||['?','iso','','',0], v=VERS[it.ver]||VERS.LP, last=lastFor(it.exId,it.ver), goal=last?last.kg+itemInc(it):null, byReps=it.inc===0;
+    const e=EXA(it.exId)||['?','iso','','',0], v=VERS[it.ver]||VERS.LP, last=lastFor(it.exId,it.ver), goal=last?last.kg+incFor(it):null, byReps=it.inc===0;
     const cyc=it.cy.map(x=>`<b class="${x===it.ver?'cur':''}">${x}</b>`).join('<span>›</span>');
     const alts=alternativesFor(it.exId).slice(0,24);
     const vid=exVideo(it.exId);
@@ -951,7 +958,7 @@ function viewToday(){
       <div class="target">
         <div>${!it.reps&&REP_OPTS[it.ver]?`<button type="button" class="rbtn" data-act="rpick" data-i="${idx}" aria-expanded="${ui.rpick===idx}"><div class="label">Powtórzenia ▾</div><div class="v">${(()=>{const r=repRange(it),st=repStats(it.ver),top=/max/.test(r)?null:Number(r.split('-').pop());return esc(repLabel(r))+(st&&top!==null&&top<st.max?` <span class="muted">(max ${st.max})</span>`:'')})()}</div></button>`:`<div class="label">Powtórzenia</div><div class="v">${esc(repRange(it))}</div>`}</div>
         <div><div class="label">Ostatnio ${it.ver}</div><div class="v">${last?showKg(it.exId,last.kg)+' × '+(isNaN(last.reps)?'?':last.reps)+rirTxt(last.rir):'—'}</div>${last?`<div class="muted">${dstr(last.date)}${effKg(it.exId,last.kg,last.bw||null)!==null?' · efektywnie '+fmt(effKg(it.exId,last.kg,last.bw||null))+' kg':''}</div>`:''}</div>
-        <div class="goal"><div class="label">Cel dziś</div><div class="v">${byReps?(last?(last.kg&&!(TIMED.has(it.exId))?showKg(it.exId,last.kg)+' × ':'')+(isNaN(last.reps)?'?':(last.reps+1)+'+')+(TIMED.has(it.exId)?' s':''):'pierwszy raz'):goalTxt(it.exId,goal)}</div><div class="muted">${goal!==null&&effKg(it.exId,goal)!==null?'efektywnie '+fmt(effKg(it.exId,Math.min(goal,assistMode(it.exId)?0:goal)))+' kg · ':''}przerwa ${v.rest}</div></div>
+        <div class="goal"><div class="label">Cel dziś${last&&!byReps&&incFor(it)===0?' · bez przyrostu':''}</div><div class="v">${byReps?(last?(last.kg&&!(TIMED.has(it.exId))?showKg(it.exId,last.kg)+' × ':'')+(isNaN(last.reps)?'?':(last.reps+1)+'+')+(TIMED.has(it.exId)?' s':''):'pierwszy raz'):goalTxt(it.exId,goal)}</div><div class="muted">${goal!==null&&effKg(it.exId,goal)!==null?'efektywnie '+fmt(effKg(it.exId,Math.min(goal,assistMode(it.exId)?0:goal)))+' kg · ':''}przerwa ${v.rest}</div></div>
       </div>
       ${ui.chart===idx?chartSVG(it.exId,(ui.chartVer||{})[it.exId]||it.ver):''}
       ${ui.rpick===idx?`<div class="vpick"><span class="muted">Zakres ${it.ver} dla tego ćwiczenia:</span>${REP_OPTS[it.ver].map(r=>`<button type="button" class="chip" data-act="rpickSet" data-i="${idx}" data-v="${r}" aria-pressed="${repRange(it)===r}">${repLabel(r)}</button>`).join('')}</div>`:''}
@@ -1080,6 +1087,7 @@ function viewSettings(){
   html+=`<div><button type="button" class="btn ghost" data-act="planNew">+ Nowy plan</button></div>
     <span class="muted" style="font-size:13px">Nazwę każdego planu zmienisz przyciskiem „✎ Nazwa”. Ćwiczeń w szablonach nie da się zmieniać. „Kopiuj” robi z szablonu własny plan do edycji, a cykle wersji i ciężary przechodzą razem z nim.</span></div>
   <div class="field"><label class="label" for="bw">Masa ciała (kg)</label><input id="bw" inputmode="decimal" placeholder="np. 82" value="${S.settings.bw?fmt(S.settings.bw):''}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px"><span class="muted" style="font-size:13px">Opcjonalnie. Dla ćwiczeń z masą ciała apka pokaże obciążenie efektywne, np. 82 kg − 20 kg asysty = 62 kg. Każdy trening zapamiętuje masę z dnia, w którym go zapisałeś.</span></div>
+  <div class="field"><span class="label">Przyrost ciężaru</span><div class="seg" role="group"><button type="button" data-act="prog" data-v="block4" aria-pressed="${S.settings.prog!=='version'}">Co 4 wykonania</button><button type="button" data-act="prog" data-v="version" aria-pressed="${S.settings.prog==='version'}">Przy każdym powrocie</button></div><span class="muted" style="font-size:13px">Co 4 wykonania: przy cyklu HD›VC›HC›VD bez zmian, a przy VC›VD ciężar rośnie co drugi powrót do wersji, czyli raz na 4 wykonania ćwiczenia. Przy każdym powrocie: dosłownie jak w PDF, +przyrost za każdym razem.</span></div>
   <div class="field"><span class="label">RIR przy seriach</span><div class="seg" role="group"><button type="button" data-act="rirOn" data-v="1" aria-pressed="${S.settings.rir!==false}">Pokazuj</button><button type="button" data-act="rirOn" data-v="0" aria-pressed="${S.settings.rir===false}">Ukryj</button></div><span class="muted" style="font-size:13px">Po odhaczeniu serii możesz dotknąć, ile powtórzeń zostało w zapasie (0 = do upadku). Nieobowiązkowe: bez wyboru nic się nie zapisuje.</span></div>
   <div class="field"><label class="label" for="inc">Minimalny przyrost ciężaru (kg)</label><input id="inc" inputmode="decimal" value="${fmt(S.settings.inc)}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px"></div>
   <div class="field"><span class="label">Stan cykli</span><div class="tbl"><table><thead><tr><th>Tr.</th><th>Ćwiczenie</th><th>Teraz</th><th>Potem</th></tr></thead><tbody>`;
@@ -1237,16 +1245,17 @@ document.addEventListener('click',e=>{
       S.cycles[it.key]=n-(n%L)+idx; it.ver=v; ui.vpick=null; persist(); draftSave(); toast(`${exName(it.exId)}: wersja ${v}`); break}
     case 'kgStep': {const it=DRAFT.items[i], st=it.sets[+el.dataset.s], inc=itemInc(it)||Number(S.settings.inc||1.25);
       const as=assistMode(it.exId);
-      let base=num(st.kg); if(isNaN(base)){const g=goalFor(it.exId,it.ver,itemInc(it)); if(g!==null){st.kg=as&&g>0?'0':fmt(g);draftSave();break} base=0}
+      let base=num(st.kg); if(isNaN(base)){const g=goalFor(it.exId,it.ver,incFor(it)); if(g!==null){st.kg=as&&g>0?'0':fmt(g);draftSave();break} base=0}
       if(as){const nv=Math.max(0,Math.abs(base)+inc*(+el.dataset.d)); st.kg=nv?fmt(-nv):'0'} // stepper works on the shown assistance
       else st.kg=fmt(Math.max(0,base+inc*(+el.dataset.d)));
       draftSave(); break}
     case 'tick': {const it=DRAFT.items[i], st=it.sets[+el.dataset.s];
-      if(!st.done){ if(st.kg===''){const g=goalFor(it.exId,it.ver,itemInc(it)); if(g!==null) st.kg=(assistMode(it.exId)&&g>0)?'0':fmt(g); else if(loadKind(it.exId)) st.kg='0'} st.done=true; startTimer(it.ver); keepAwake();
+      if(!st.done){ if(st.kg===''){const g=goalFor(it.exId,it.ver,incFor(it)); if(g!==null) st.kg=(assistMode(it.exId)&&g>0)?'0':fmt(g); else if(loadKind(it.exId)) st.kg='0'} st.done=true; startTimer(it.ver); keepAwake();
         if(!DRAFT.startedAt&&!DRAFT.hinted){DRAFT.hinted=1;toast('Licznik treningu stoi. Włącz go przyciskiem Rozpocznij.')} }
       else st.done=false;
       draftSave(); break}
     case 'rir': {const st=DRAFT.items[i].sets[+el.dataset.s]; st.rir=String(st.rir)===el.dataset.v?'':el.dataset.v; draftSave(); break}
+    case 'prog': S.settings.prog=el.dataset.v; persist(); break;
     case 'rirOn': S.settings.rir=el.dataset.v==='1'; persist(); break;
     case 'sumClose': ui.summary=null; break;
     case 'chart': ui.chart=ui.chart===i?null:i; break;
