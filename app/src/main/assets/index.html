@@ -1,5 +1,8 @@
-<!doctype html>
-<html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#11130e">
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dziennik Balance FBW</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -305,7 +308,6 @@ nav.tabs button{display:flex;flex-direction:column;align-items:center;gap:2px}
 nav.tabs svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
-</head><body>
 
 <div class="wrap">
   <header class="top">
@@ -658,7 +660,7 @@ for(const d of [3,4,5]) for(const p of [1,2]){
     const g=tr[0];
     trainings[tr]=PLANS[d][p][g].map((sl,i)=>({key:g+':'+sl.ex,ex:sl.ex,cy:sl.cy,sets:(d===3&&i>=3)?3:SETS[d][tr]}));
   }
-  BUILTIN.push({id:'sz-'+d+'-'+p,builtin:true,days:d,prio:p,name:`Szostek Balance FBW · ${d} dni · P${p}`,note:PRIO_TXT[p],trNames:Object.keys(SETS[d]),trainings,schedule:SCHED[d]});
+  BUILTIN.push({id:'sz-'+d+'-'+p,builtin:true,days:d,prio:p,name:`Balance FBW · ${d} dni · P${p}`,note:PRIO_TXT[p],trNames:Object.keys(SETS[d]),trainings,schedule:SCHED[d]});
 }
 // Linear-progression templates: every slot has the single neutral version LP, its own target reps (r)
 // and increment (inc; 0 = progress by reps/variant, used for bodyweight work)
@@ -905,7 +907,7 @@ function cardioCard(c,ci){
   </article>`;
 }
 function vBadge(v){return `<span class="vmini v-${v}">${v}</span>`}
-const PGROUPS=[['Moje plany',x=>!x.builtin],['Szostek Balance FBW',x=>/^sz-/.test(x.id)],['Siła',x=>['sl5x5','ss','ppl'].includes(x.id)],['Kalistenika',x=>/^kal/.test(x.id)],['Cardio',x=>x.builtin&&/^c/.test(x.id)]];
+const PGROUPS=[['Moje plany',x=>!x.builtin],['Balance FBW',x=>/^sz-/.test(x.id)],['Siła',x=>['sl5x5','ss','ppl'].includes(x.id)],['Kalistenika',x=>/^kal/.test(x.id)],['Cardio',x=>x.builtin&&/^c/.test(x.id)]];
 function viewOnboarding(){
   const sel=ui.onbPlan||S.activePlan, sp=allPlans().find(x=>x.id===sel)||plan();
   let h=`<section class="onb"><h2>Witaj w dzienniku</h2><p class="muted" style="margin:0">Dwa kroki i możesz trenować. Wszystko zmienisz potem w zakładce Plan.</p>
@@ -1467,4 +1469,8 @@ applyLook();
 render();
 initCloud();
 </script>
-</body></html>
+</head>
+<body>
+
+</body>
+</html>
