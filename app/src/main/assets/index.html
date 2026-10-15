@@ -302,7 +302,10 @@ const VERS={
 };
 // one rep range per exercise+version: options from the program table, default = the author's worked example
 const REP_OPTS={HD:['0-1 (max)','1-3','1-5'],HC:['1-3','3-6'],VC:['6-8','8-10'],VD:['6-8','8-10','10-20','12-15']};
-const REP_DEF={HD:'1-3',HC:'3-6',VC:'6-8',VD:'12-15'};
+const REP_DEF={HD:'1-3',HC:'1-3',VC:'6-8',VD:'8-10'};
+// average and top of all regular ranges of a version (the "0-1 (max)" attempt is left out)
+function repStats(ver){const n=(REP_OPTS[ver]||[]).filter(r=>!/max/.test(r)).flatMap(r=>r.split('-').map(Number));if(!n.length)return null;const lo=Math.min(...n),hi=Math.max(...n);return {avg:Math.round((lo+hi)/2),max:hi}}
+const repLabel=r=>/max/.test(r)?'próba max (0-1)':r;
 const PAT={vpush:'Pchnięcie w pionie',vpull:'Ściąganie w pionie',hpush:'Pchnięcie w poziomie',hpull:'Ściąganie w poziomie',knee:'Zgięcie kolana',hip:'Zgięcie biodra',iso:'Izolacja'};
 // id: [name, pattern, youtube id, focus, bodyweight]
 const EX={
@@ -866,12 +869,12 @@ function viewToday(){
       ${ui.vpick===idx?`<div class="vpick"><span class="muted">Ustaw wersję:</span>${[...new Set(it.cy)].map(x=>`<button type="button" class="vmini v-${x}" data-act="setVer" data-i="${idx}" data-v="${x}">${x}</button>`).join('')}<button type="button" class="link" data-act="vpick" data-i="${idx}">Anuluj</button></div>`:''}
       ${it.cy.length>1?`<div class="cyc"><span>Cykl:</span>${cyc}</div>`:''}
       <div class="target">
-        <div>${!it.reps&&REP_OPTS[it.ver]?`<button type="button" class="rbtn" data-act="rpick" data-i="${idx}" aria-expanded="${ui.rpick===idx}"><div class="label">Powtórzenia ▾</div><div class="v">${esc(repRange(it))}</div></button>`:`<div class="label">Powtórzenia</div><div class="v">${esc(repRange(it))}</div>`}</div>
+        <div>${!it.reps&&REP_OPTS[it.ver]?`<button type="button" class="rbtn" data-act="rpick" data-i="${idx}" aria-expanded="${ui.rpick===idx}"><div class="label">Powtórzenia ▾</div><div class="v">${esc(repLabel(repRange(it)))}</div>${(()=>{const st=repStats(it.ver);return st?`<div class="muted">śr. ~${st.avg} · max ${st.max}</div>`:''})()}</button>`:`<div class="label">Powtórzenia</div><div class="v">${esc(repRange(it))}</div>`}</div>
         <div><div class="label">Ostatnio ${it.ver}</div><div class="v">${last?showKg(it.exId,last.kg)+' × '+(isNaN(last.reps)?'?':last.reps)+rirTxt(last.rir):'—'}</div>${last?`<div class="muted">${dstr(last.date)}${effKg(it.exId,last.kg,last.bw||null)!==null?' · efektywnie '+fmt(effKg(it.exId,last.kg,last.bw||null))+' kg':''}</div>`:''}</div>
         <div class="goal"><div class="label">Cel dziś</div><div class="v">${byReps?(last?(last.kg&&!(TIMED.has(it.exId))?showKg(it.exId,last.kg)+' × ':'')+(isNaN(last.reps)?'?':(last.reps+1)+'+')+(TIMED.has(it.exId)?' s':''):'pierwszy raz'):goalTxt(it.exId,goal)}</div><div class="muted">${goal!==null&&effKg(it.exId,goal)!==null?'efektywnie '+fmt(effKg(it.exId,Math.min(goal,assistMode(it.exId)?0:goal)))+' kg · ':''}przerwa ${v.rest}</div></div>
       </div>
       ${ui.chart===idx?chartSVG(it.exId,(ui.chartVer||{})[it.exId]||it.ver):''}
-      ${ui.rpick===idx?`<div class="vpick"><span class="muted">Zakres ${it.ver} dla tego ćwiczenia:</span>${REP_OPTS[it.ver].map(r=>`<button type="button" class="chip" data-act="rpickSet" data-i="${idx}" data-v="${r}" aria-pressed="${repRange(it)===r}">${r}</button>`).join('')}</div>`:''}
+      ${ui.rpick===idx?`<div class="vpick"><span class="muted">Zakres ${it.ver} dla tego ćwiczenia:</span>${REP_OPTS[it.ver].map(r=>`<button type="button" class="chip" data-act="rpickSet" data-i="${idx}" data-v="${r}" aria-pressed="${repRange(it)===r}">${repLabel(r)}</button>`).join('')}</div>`:''}
       <div class="sets">${it.sets.map((st,si)=>`<div class="set${st.done?' done':''}${(()=>{const k=num(st.kg),pb=bestBefore(it.exId,it.ver);return st.done&&!isNaN(k)&&isFinite(pb)&&k>pb?' pr':''})()}">
         <span class="n">${si+1}</span>
         <div class="kgbox"><button type="button" class="stp" data-act="kgStep" data-d="-1" data-i="${idx}" data-s="${si}" aria-label="Mniej kg">−</button>
@@ -1146,7 +1149,7 @@ document.addEventListener('click',e=>{
       const cp=S.plans.find(x=>x.id===id); if(cp){if(nm)cp.name=nm} else {if(nm&&nm!==(BUILTIN.find(b=>b.id===id)||{}).name)S.planNames[id]=nm; else delete S.planNames[id]}
       ui.rename=null; persist(); toast('Nazwa zapisana'); break}
     case 'rpick': ui.rpick=ui.rpick===i?null:i; break;
-    case 'rpickSet': {const it=DRAFT.items[i]; S.repPick[it.exId+'|'+it.ver]=el.dataset.v; ui.rpick=null; persist(); toast(`${exName(it.exId)} ${it.ver}: ${el.dataset.v} powt.`); break}
+    case 'rpickSet': {const it=DRAFT.items[i]; S.repPick[it.exId+'|'+it.ver]=el.dataset.v; ui.rpick=null; persist(); toast(`${exName(it.exId)} ${it.ver}: ${repLabel(el.dataset.v)}`); break}
     case 'addSet': DRAFT.items[i].sets.push({kg:'',reps:'',done:false,rir:''}); draftSave(); break;
     case 'delSet': {const ss=DRAFT.items[i].sets; if(ss.length>1) ss.pop(); draftSave(); break}
     case 'swap': ui.swap=ui.swap===i?null:i; break;
