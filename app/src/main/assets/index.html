@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#11130e">
-<title>Dziennik FBW</title>
+<title>Dziennik Balance FBW</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Figtree:wght@400;500;600;700&display=swap">
@@ -281,6 +281,28 @@ body.ct{padding-bottom:calc(270px + env(safe-area-inset-bottom,0px))}
 .pprev{width:100%;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:8px;font-size:13px}
 .pprev p{margin:0}
 .pprev ul{margin:4px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
+.hrow{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;font-size:13px}
+.hrow .link{font-size:13px}
+.nextline{font-size:12px;color:var(--muted)}
+.pseg{margin-top:-4px}
+.pgroup{background:none;border:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.pgroup > summary{font-weight:700;font-size:13px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:6px 0;list-style:none;display:flex;justify-content:space-between}
+.pgroup > summary::after{content:"▾"}
+.pgroup[open] > summary::after{content:"▴"}
+.pgroup > summary::-webkit-details-marker{display:none}
+.pgroup[open]{gap:8px}
+.pgroup .plan-item{margin-bottom:8px}
+.onb{display:flex;flex-direction:column;gap:12px}
+.onb h2{font-size:24px}
+.onb .opt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;width:100%;border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:9px 12px;color:var(--fg)}
+.onb .opt[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 3px 0 0 var(--accent)}
+.onb .opt small{color:var(--muted);font-size:12px}
+.onb ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:13px}
+.legend{font-size:12px;display:flex;flex-direction:column;gap:4px;background:var(--surface2);border-radius:8px;padding:8px 10px}
+.legend div{display:grid;grid-template-columns:40px minmax(0,1fr);gap:6px;align-items:baseline}
+.infob{background:none;border:0;padding:0 2px;color:var(--accent);font-weight:700;font-size:13px}
+nav.tabs button{display:flex;flex-direction:column;align-items:center;gap:2px}
+nav.tabs svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head><body>
@@ -303,9 +325,9 @@ body.ct{padding-bottom:calc(270px + env(safe-area-inset-bottom,0px))}
       <button type="button" id="tStop">Stop</button>
     </div>
     <nav class="tabs">
-      <button type="button" data-tab="today">TRENING</button>
-      <button type="button" data-tab="history">HISTORIA</button>
-      <button type="button" data-tab="settings">PLAN</button>
+      <button type="button" data-tab="today"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 7v10M18 7v10M3 9v6M21 9v6M6 12h12"/></svg>TRENING</button>
+      <button type="button" data-tab="history"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19h16M7 15l4-5 3 3 5-6"/></svg>HISTORIA</button>
+      <button type="button" data-tab="settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/></svg>PLAN</button>
     </nav>
   </div>
 </div>
@@ -883,7 +905,22 @@ function cardioCard(c,ci){
   </article>`;
 }
 function vBadge(v){return `<span class="vmini v-${v}">${v}</span>`}
+const PGROUPS=[['Moje plany',x=>!x.builtin],['Szostek Balance FBW',x=>/^sz-/.test(x.id)],['Siła',x=>['sl5x5','ss','ppl'].includes(x.id)],['Kalistenika',x=>/^kal/.test(x.id)],['Cardio',x=>x.builtin&&/^c/.test(x.id)]];
+function viewOnboarding(){
+  const sel=ui.onbPlan||S.activePlan, sp=allPlans().find(x=>x.id===sel)||plan();
+  let h=`<section class="onb"><h2>Witaj w dzienniku</h2><p class="muted" style="margin:0">Dwa kroki i możesz trenować. Wszystko zmienisz potem w zakładce Plan.</p>
+    <div class="label">1. Wybierz plan</div>`;
+  for(const [gn,gf] of PGROUPS){const list=allPlans().filter(gf); if(!list.length) continue;
+    h+=`<div class="muted" style="font-size:12px;font-weight:700">${gn}</div>`+list.map(x=>`<button type="button" class="opt" data-act="onbPlan" data-id="${x.id}" aria-pressed="${x.id===sel}"><b>${esc(x.name)}</b><small>${esc(x.trNames.join(' · '))}</small></button>`).join('');}
+  h+=`<details class="pgroup" open><summary>Co jest w planie „${esc(sp.name)}”</summary>${planPreview(sp)}</details>
+    <label class="label" for="bw">2. Masa ciała (kg, opcjonalnie)</label><input id="bw" inputmode="decimal" placeholder="np. 82" value="${S.settings.bw?fmt(S.settings.bw):''}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px">
+    <div class="label">Jak to działa</div>
+    <ol><li>Apka sama wie, który trening jest dziś i w jakiej wersji robisz każde ćwiczenie.</li><li>Przy ćwiczeniu widzisz ostatni wynik i cel na dziś. Wpisujesz kg i powtórzenia, potem ✓.</li><li>„Zakończ trening” zalicza cały trening i przesuwa plan dalej.</li></ol>
+    <button type="button" class="btn wide" data-act="onbDone">Zaczynamy</button></section>`;
+  return h;
+}
 function viewToday(){
+  if(!S.settings.chosen&&!SESS.length) return viewOnboarding();
   ensureDraft();
   const p=plan(), s=seq(), L=s.length, pos=S.seqPos%L;
   let strip='';
@@ -913,16 +950,16 @@ function viewToday(){
     <div class="hero-top"><div><div class="label">${isNext?'Kolejny trening':'Wybrany trening'} · ${esc(p.name)}</div>
       <div class="trname">${esc(tr)}</div></div>
       <div class="pick" role="group" aria-label="Wybierz trening">${trainings().map(t=>`<button type="button" class="chip" data-act="pickTr" data-tr="${esc(t)}" aria-pressed="${t===tr}">${esc(t)}</button>`).join('')}</div></div>
-    <div class="strip">${strip}</div>
-    <span class="muted" style="font-size:12px">Dotknij ${p.schedule?'dzień w rozkładzie':'pozycję w kolejności'}, żeby ustawić, gdzie jesteś w planie.</span>
+    <div class="nextline">Dalej: ${[1,2,3].map(k=>esc(s[(pos+k)%L])).join(' → ')}</div>
+    <div class="hrow"><button type="button" class="link" data-act="stripTgl" aria-expanded="${!!ui.strip}">📅 Rozkład ${ui.strip?'▴':'▾'}</button><span>Data: <button type="button" class="link" data-act="dateEdit">${dateTxt} ✎</button></span></div>
+    ${ui.dateEdit?`<div class="row"><input type="date" id="trDate" value="${DRAFT.date||isoDay(Date.now())}" max="${isoDay(Date.now())}" aria-label="Data treningu" style="border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 8px"><button type="button" class="sbtn" data-act="dateToday">Dziś</button></div>`:''}
+    ${ui.strip?`<div class="strip">${strip}</div><span class="muted" style="font-size:12px">Dotknij ${p.schedule?'dzień w rozkładzie':'pozycję w kolejności'}, żeby ustawić, gdzie jesteś w planie.</span>`:''}
   </section>
   ${ui.posAsk!=null?(()=>{const k=ui.posAsk,t=s[k];return `<div class="notice"><b>Ustawić ${esc(t)} jako kolejny trening?</b><span>${draftHasData()?`Bieżący trening ${esc(tr)} zostaje z wpisanymi seriami i licznikiem. Zmieni się tylko kolejność planu.`:'Zmieni się miejsce w planie, od którego liczą się kolejne treningi.'}</span><div class="row"><button type="button" class="btn" data-act="posYes">Ustaw ${esc(t)}</button><button type="button" class="btn ghost" data-act="posNo">Anuluj</button></div></div>`})():''}
   <div class="wbox">${!DRAFT.startedAt?`<button type="button" class="btn wide" data-act="wStart">▶ Rozpocznij trening ${esc(tr)}</button>`:
     `<div class="wrun${DRAFT.pausedAt?' paused':''}"><div><div class="label">Czas treningu${DRAFT.pausedAt?' · pauza':''}</div><b id="wClock">${fmtClock(wElapsed())}</b></div>
       <div class="row"><button type="button" class="sbtn" data-act="wPause">${DRAFT.pausedAt?'▶ Wznów':'⏸ Pauza'}</button><button type="button" class="sbtn" data-act="wResetAsk">↺ Reset</button></div></div>`}
-    ${ui.wResetAsk?`<div class="notice"><b>Wyzerować trening ${esc(tr)}?</b><span>Wpisane serie i licznik zostaną usunięte. Plan i cykle wersji się nie zmienią.</span><div class="row"><button type="button" class="btn danger" data-act="wReset">Wyzeruj</button><button type="button" class="btn ghost" data-act="wResetNo">Anuluj</button></div></div>`:''}</div>
-  <div class="datebox"><div><div class="label">Data treningu</div><b>${dateTxt}</b></div>
-    ${ui.dateEdit?`<div class="row"><input type="date" id="trDate" value="${DRAFT.date||isoDay(Date.now())}" max="${isoDay(Date.now())}" aria-label="Data treningu"><button type="button" class="sbtn" data-act="dateToday">Dziś</button></div>`:`<button type="button" class="link" data-act="dateEdit">Zmień</button>`}</div>`;
+    ${ui.wResetAsk?`<div class="notice"><b>Wyzerować trening ${esc(tr)}?</b><span>Wpisane serie i licznik zostaną usunięte. Plan i cykle wersji się nie zmienią.</span><div class="row"><button type="button" class="btn danger" data-act="wReset">Wyzeruj</button><button type="button" class="btn ghost" data-act="wResetNo">Anuluj</button></div></div>`:''}</div>`;
   if(SESS.length&&DRAFT.items.length){
     const rec=recovery(), dm=[...new Set(DRAFT.items.flatMap(it=>musclesOf(it.exId)))];
     const rf=rec.filter(r=>dm.includes(r.m)).sort((a,b)=>a.pct-b.pct);
@@ -930,7 +967,7 @@ function viewToday(){
     html+=`<button type="button" class="ready" data-act="goRecovery">${ring(ready,58,'Gotowość mięśni')}<div><div class="label">Gotowość mięśni na ${esc(tr)}</div><div style="font-size:14px">${rf.slice(0,3).map(r=>`${MUSCLE_NAME[r.m]} <b style="color:${recColor(r.pct)}">${r.pct}%</b>`).join(' · ')||'Wszystko gotowe'}</div></div><span class="muted">›</span></button>`;
   }
   if(!S.settings.chosen){
-    html+=`<div class="notice"><b>Najpierw wybierz plan.</b><span>Teraz pokazuję ${esc(p.name)}. Plany są w zakładce Plan → Biblioteka.</span><div><button type="button" class="btn ghost" data-act="tab" data-tab="settings">Wybierz plan</button></div></div>`;
+    html+=`<div class="notice"><b>Najpierw wybierz plan.</b><span>Teraz pokazuję ${esc(p.name)}. Plany są w zakładce Plan → Biblioteka.</span><div><button type="button" class="btn ghost" data-act="ptab" data-v="plans">Wybierz plan</button></div></div>`;
   }
   if(SESS.length&&cloudState!=='cloud'&&(!S.lastBackup||Date.now()-S.lastBackup>7*864e5)){
     html+=`<div class="notice"><b>${S.lastBackup?'Ostatnia kopia ponad tydzień temu.':'Nie masz jeszcze kopii dziennika.'}</b><span>Dane są tylko na tym telefonie. Zapisz plik kopii, żeby nie stracić historii.</span><div><button type="button" class="btn ghost" data-act="exportJson">Zapisz kopię teraz</button></div></div>`;
@@ -956,7 +993,8 @@ function viewToday(){
       </div>
       <button type="button" class="ver v-${it.ver}" data-act="vpick" data-i="${idx}" aria-label="Wersja ${it.ver}, zmień">${it.ver}<small>${it.sets.length} ${it.sets.length===1?'SERIA':it.sets.length<5?'SERIE':'SERII'}</small></button></div>
       ${ui.vpick===idx?`<div class="vpick"><span class="muted">Ustaw wersję:</span>${[...new Set(it.cy)].map(x=>`<button type="button" class="vmini v-${x}" data-act="setVer" data-i="${idx}" data-v="${x}">${x}</button>`).join('')}<button type="button" class="link" data-act="vpick" data-i="${idx}">Anuluj</button></div>`:''}
-      ${it.cy.length>1?`<div class="cyc"><span>Cykl:</span>${cyc}</div>`:''}
+      ${it.cy.length>1?`<div class="cyc"><span>Cykl:</span>${cyc}<button type="button" class="infob" data-act="legend" data-i="${idx}" aria-label="Co znaczą wersje">ⓘ</button></div>`:''}
+      ${ui.legend===idx?`<div class="legend"><div><b>HD</b><span>najciężej, mało powtórzeń (1-5), przerwa 2–3 min</span></div><div><b>HC</b><span>ciężko, 1-6 powtórzeń, przerwa 2–3 min</span></div><div><b>VC</b><span>średnio, 6-10 powtórzeń, przerwa 1–2 min</span></div><div><b>VD</b><span>lżej, więcej powtórzeń (6-20), przerwa 1 min</span></div><span class="muted">Co trening ćwiczenie przechodzi na kolejną wersję. Ciężar rośnie zgodnie z ustawieniem „Dodawaj ciężar co … treningów”.</span></div>`:''}
       <div class="target">
         <div>${!it.reps&&REP_OPTS[it.ver]?`<button type="button" class="rbtn" data-act="rpick" data-i="${idx}" aria-expanded="${ui.rpick===idx}"><div class="label">Powtórzenia ▾</div><div class="v">${(()=>{const r=repRange(it),st=repStats(it.ver),top=/max/.test(r)?null:Number(r.split('-').pop());return esc(repLabel(r))+(st&&top!==null&&top<st.max?` <span class="muted">(max ${st.max})</span>`:'')})()}</div></button>`:`<div class="label">Powtórzenia</div><div class="v">${esc(repRange(it))}</div>`}</div>
         <div><div class="label">Ostatnio ${it.ver}</div><div class="v">${last?showKg(it.exId,last.kg)+' × '+(isNaN(last.reps)?'?':last.reps)+rirTxt(last.rir):'—'}</div>${last?`<div class="muted">${dstr(last.date)}${effKg(it.exId,last.kg,last.bw||null)!==null?' · efektywnie '+fmt(effKg(it.exId,last.kg,last.bw||null))+' kg':''}</div>`:''}</div>
@@ -967,7 +1005,7 @@ function viewToday(){
       <div class="sets">${it.sets.map((st,si)=>`<div class="set${st.done?' done':''}${(()=>{const k=num(st.kg),pb=bestBefore(it.exId,it.ver);return st.done&&!isNaN(k)&&isFinite(pb)&&k>pb?' pr':''})()}">
         <span class="n">${si+1}</span>
         <div class="kgbox"><button type="button" class="stp" data-act="kgStep" data-d="-1" data-i="${idx}" data-s="${si}" aria-label="Mniej kg">−</button>
-          <label class="inp"><input id="kg-${idx}-${si}" inputmode="decimal" autocomplete="off" aria-label="Ciężar seria ${si+1}" data-i="${idx}" data-s="${si}" data-f="kg" data-as="${assistMode(it.exId)?1:0}" value="${esc(kgShown(it.exId,st.kg))}" placeholder="${assistMode(it.exId)?(goal!==null?fmt(Math.max(0,-goal)):'asysta'):(goal!==null?fmt(goal):(e[4]?'0':'kg'))}"><span>${assistMode(it.exId)?'as.':'kg'}</span></label>
+          <label class="inp"><input id="kg-${idx}-${si}" inputmode="decimal" autocomplete="off" aria-label="Ciężar seria ${si+1}" data-i="${idx}" data-s="${si}" data-f="kg" data-as="${assistMode(it.exId)?1:0}" value="${esc(kgShown(it.exId,st.kg))}" placeholder="${assistMode(it.exId)?(goal!==null?fmt(Math.max(0,-goal)):'asysta'):(goal!==null?fmt(goal):(e[4]?'0':'–'))}"><span>${assistMode(it.exId)?'as.':'kg'}</span></label>
           <button type="button" class="stp" data-act="kgStep" data-d="1" data-i="${idx}" data-s="${si}" aria-label="Więcej kg">+</button></div>
         <span class="x">×</span>
         <label class="inp"><input id="rp-${idx}-${si}" inputmode="numeric" autocomplete="off" aria-label="Powtórzenia seria ${si+1}" data-i="${idx}" data-s="${si}" data-f="reps" value="${esc(st.reps)}" placeholder="${TIMED.has(it.exId)?'sek.':'pow.'}"><span></span></label>
@@ -1080,15 +1118,20 @@ function viewSettings(){
   <div class="field"><span class="label">Aktywny plan</span><div class="plan-item active"><div><b>${esc(p.name)}</b><span class="muted" style="font-size:13px">${p.note?esc(p.note)+' · ':''}${p.trNames.length} treningi: ${p.trNames.map(esc).join(', ')}</span></div></div></div>`;
   if(ui.edit){const ep=S.plans.find(x=>x.id===ui.edit); if(ep) html+=viewEditor(ep); else ui.edit=null;}
   html+=`<div class="field"><span class="label">Biblioteka treningów</span>`;
-  for(const x of allPlans()){
+  for(const [gn,gf] of PGROUPS){const list=allPlans().filter(gf); if(!list.length) continue;
+   const open=gn==='Moje plany'||list.some(x=>[p.id,ui.preview,ui.useAsk,ui.rename,ui.more].includes(x.id));
+   html+=`<details class="pgroup"${open?' open':''}><summary>${gn} · ${list.length}</summary>`;
+  for(const x of list){
     html+=`<div class="plan-item${x.id===p.id?' active':''}" style="flex-wrap:wrap">${ui.rename===x.id?`<div class="rename"><input type="text" id="rn-${x.id}" value="${esc(x.name)}" aria-label="Nowa nazwa planu"><button type="button" class="sbtn acc" data-act="renameSave" data-id="${x.id}">Zapisz</button><button type="button" class="sbtn" data-act="renameNo">Anuluj</button></div>`:`<div><b>${esc(x.name)}</b><span class="muted" style="font-size:12px">${x.builtin?'Szablon':'Własny plan'} · ${x.trNames.map(esc).join(', ')}</span></div>`}
-      <div class="row"><button type="button" class="sbtn" data-act="preview" data-id="${x.id}" aria-expanded="${ui.preview===x.id}">${ui.preview===x.id?'▴ Zwiń':'👁 Podgląd'}</button><button type="button" class="sbtn" data-act="rename" data-id="${x.id}" aria-label="Zmień nazwę">✎ Nazwa</button>${x.id!==p.id?`<button type="button" class="sbtn acc" data-act="planUse" data-id="${x.id}">Wybierz</button>`:''}${x.builtin?`<button type="button" class="sbtn" data-act="planDup" data-id="${x.id}">Kopiuj</button>`:`<button type="button" class="sbtn" data-act="planEdit" data-id="${x.id}">Edytuj</button>`}</div>
+      <div class="row"><button type="button" class="sbtn" data-act="preview" data-id="${x.id}" aria-expanded="${ui.preview===x.id}">${ui.preview===x.id?'▴ Zwiń':'👁 Podgląd'}</button>${x.id!==p.id?`<button type="button" class="sbtn acc" data-act="planUse" data-id="${x.id}">Wybierz</button>`:`<span class="muted" style="font-size:12px">aktywny</span>`}<button type="button" class="sbtn" data-act="more" data-id="${x.id}" aria-label="Więcej opcji" aria-expanded="${ui.more===x.id}">⋯</button></div>
+      ${ui.more===x.id?`<div class="row"><button type="button" class="sbtn" data-act="rename" data-id="${x.id}">✎ Zmień nazwę</button>${x.builtin?`<button type="button" class="sbtn" data-act="planDup" data-id="${x.id}">Kopiuj do edycji</button>`:`<button type="button" class="sbtn" data-act="planEdit" data-id="${x.id}">Edytuj</button>`}</div>`:''}
       ${ui.useAsk===x.id?`<div class="notice" style="width:100%"><b>Przełączyć na „${esc(x.name)}”?</b><span>Historia, ciężary i cykle zostają. Miejsce w obecnym planie zostanie zapamiętane, więc po powrocie wrócisz tam, gdzie skończyłeś.</span><div class="row"><button type="button" class="btn" data-act="planUseYes" data-id="${x.id}">Przełącz</button><button type="button" class="btn ghost" data-act="planUseNo">Anuluj</button></div></div>`:''}
       ${ui.preview===x.id?planPreview(x):''}</div>`;
   }
+   html+=`</details>`;}
   html+=`<div><button type="button" class="btn ghost" data-act="planNew">+ Nowy plan</button></div>
-    <span class="muted" style="font-size:13px">Nazwę każdego planu zmienisz przyciskiem „✎ Nazwa”. Ćwiczeń w szablonach nie da się zmieniać. „Kopiuj” robi z szablonu własny plan do edycji, a cykle wersji i ciężary przechodzą razem z nim.</span></div>
-  <div class="field"><label class="label" for="bw">Masa ciała (kg)</label><input id="bw" inputmode="decimal" placeholder="np. 82" value="${S.settings.bw?fmt(S.settings.bw):''}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px"><span class="muted" style="font-size:13px">Opcjonalnie. Dla ćwiczeń z masą ciała apka pokaże obciążenie efektywne, np. 82 kg − 20 kg asysty = 62 kg. Każdy trening zapamiętuje masę z dnia, w którym go zapisałeś.</span></div>
+    <span class="muted" style="font-size:13px">Pod „⋯” zmienisz nazwę planu albo zrobisz kopię do edycji. Ćwiczeń w szablonach nie da się zmieniać. Kopia robi z szablonu własny plan do edycji, a cykle wersji i ciężary przechodzą razem z nim.</span></div>
+<!--SEG:set-->  <div class="field"><label class="label" for="bw">Masa ciała (kg)</label><input id="bw" inputmode="decimal" placeholder="np. 82" value="${S.settings.bw?fmt(S.settings.bw):''}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px"><span class="muted" style="font-size:13px">Opcjonalnie. Dla ćwiczeń z masą ciała apka pokaże obciążenie efektywne, np. 82 kg − 20 kg asysty = 62 kg. Każdy trening zapamiętuje masę z dnia, w którym go zapisałeś.</span></div>
   <div class="field"><span class="label">RIR przy seriach</span><div class="seg" role="group"><button type="button" data-act="rirOn" data-v="1" aria-pressed="${S.settings.rir!==false}">Pokazuj</button><button type="button" data-act="rirOn" data-v="0" aria-pressed="${S.settings.rir===false}">Ukryj</button></div><span class="muted" style="font-size:13px">Po odhaczeniu serii możesz dotknąć, ile powtórzeń zostało w zapasie (0 = do upadku). Nieobowiązkowe: bez wyboru nic się nie zapisuje.</span></div>
   <div class="field"><label class="label" for="inc">Minimalny przyrost ciężaru (kg)</label><input id="inc" inputmode="decimal" value="${fmt(S.settings.inc)}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px"></div>
   <div class="field"><label class="label" for="every">Dodawaj ciężar co … treningów</label><div class="row"><input id="every" inputmode="numeric" value="${everyN()}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;width:80px;font-size:16px"><span class="muted">treningów z danym ćwiczeniem</span></div><span class="muted" style="font-size:13px">Przy 4: ćwiczenia z cyklem HD›VC›HC›VD dostają przyrost przy każdym powrocie do wersji, a izolacje VC›VD co drugi raz. Przy 1: przyrost za każdym razem, czyli dosłownie jak w PDF i jak w StrongLifts. Przy 0: bez żadnego przyrostu. Działa dla wszystkich planów.</span></div>
@@ -1105,7 +1148,7 @@ function viewSettings(){
   <div class="field"><span class="label">Wygląd</span>
     <div class="seg" role="group">${[['classic','Klasyczny'],['modern','Nowoczesny']].map(([k,l])=>`<button type="button" data-act="look" data-v="${k}" aria-pressed="${S.settings.look===k}">${l}</button>`).join('')}</div>
     <div class="seg" role="group">${[['auto','Auto'],['light','Jasny'],['dark','Ciemny']].map(([k,l])=>`<button type="button" data-act="mode" data-v="${k}" aria-pressed="${S.settings.mode===k}">${l}</button>`).join('')}</div></div>
-  <div class="field"><span class="label">Kopia zapasowa</span>
+<!--SEG:data-->  <div class="field"><span class="label">Kopia zapasowa</span>
     <span class="muted" style="font-size:13px">${cloudState==='cloud'?'Dane zapisują się na Twoim koncie Claude i są widoczne tylko dla Ciebie.':'Dane są zapisane tylko na tym telefonie. Zrób kopię, zanim usuniesz aplikację lub zmienisz telefon.'}</span>
     <span style="font-size:13px">${S.lastBackup?'Ostatnia kopia: '+dlong(S.lastBackup):'Nie zrobiłeś jeszcze kopii.'}</span>
     <div class="row"><button type="button" class="btn" data-act="exportJson">Zapisz kopię (.json)</button><button type="button" class="btn ghost" data-act="exportCsv">Excel (.csv)</button></div>
@@ -1115,7 +1158,9 @@ function viewSettings(){
     ${ui.copyFallback?`<textarea id="copyTxt" readonly>${esc(JSON.stringify({S,SESS}))}</textarea>`:''}
   </div>
   <div class="field"><span class="label">Od nowa</span>${ui.resetAsk?`<div class="row"><span>Usunąć całą historię i stan cykli? Plany zostają.</span><button type="button" class="btn danger" data-act="resetYes">Usuń wszystko</button><button type="button" class="btn ghost" data-act="resetNo">Anuluj</button></div>`:`<div><button type="button" class="btn ghost" data-act="reset">Wyzeruj dziennik</button></div>`}</div>`;
-  return html;
+  const parts=html.split(/<!--SEG:\w+-->/), pt=ui.ptab||'plans';
+  const seg=`<div class="seg pseg" role="tablist">${[['plans','Plany'],['set','Ustawienia'],['data','Kopia i dane']].map(([k,l])=>`<button type="button" role="tab" data-act="ptab" data-v="${k}" aria-pressed="${pt===k}">${l}</button>`).join('')}</div>`;
+  return `<h2>Plan</h2>`+seg+(pt==='set'?parts[1]:pt==='data'?parts[2]:parts[0].replace('<h2>Plan</h2>',''));
 }
 
 function render(){
@@ -1226,7 +1271,7 @@ document.addEventListener('click',e=>{
     case 'pickTr': {const t=el.dataset.tr; if(t===DRAFT.tr) return; if(draftHasData()){ui.switchTo=t}else{buildDraft(t);draftSave()} break}
     case 'switchYes': buildDraft(ui.switchTo); ui.switchTo=null; draftSave(); break;
     case 'switchNo': ui.switchTo=null; break;
-    case 'setPos': {const k=+el.dataset.k; if(k===S.seqPos%seq().length&&!ui.posAsk) return; ui.posAsk=k; break}
+    case 'setPos': {ui.strip=true; const k=+el.dataset.k; if(k===S.seqPos%seq().length&&!ui.posAsk) return; ui.posAsk=k; break}
     case 'posNo': ui.posAsk=null; break;
     case 'posYes': {const L=seq().length, k=ui.posAsk; ui.posAsk=null; S.seqPos=S.seqPos-(S.seqPos%L)+k; S.settings.chosen=true;
       resetDraftIfEmpty(); persist(); ensureDraft(); draftSave(); toast(`Kolejny trening: ${nextTr()}`); break}
@@ -1279,6 +1324,13 @@ document.addEventListener('click',e=>{
     case 'ctPause': if(CT){CT.paused=!CT.paused;CT.last=Date.now();cTick()} return;
     case 'ctSkip': if(CT){const p=CT.ph[CT.i]; if(p){CT.pe=p.sec*1000;cTick()}} return;
     case 'ctStop': if(CT) cEnd(false); return;
+    case 'onbPlan': ui.onbPlan=el.dataset.id; break;
+    case 'onbDone': {const id=ui.onbPlan||S.activePlan; S.planPos=S.planPos||{}; if(id!==S.activePlan){S.planPos[S.activePlan]=S.seqPos;S.activePlan=id;S.seqPos=S.planPos[id]||0}
+      S.settings.chosen=true; ui={}; DRAFT=null; draftSave(); persist(); ensureDraft(); render(); window.scrollTo(0,0); return}
+    case 'stripTgl': ui.strip=!ui.strip; break;
+    case 'legend': ui.legend=ui.legend===i?null:i; break;
+    case 'ptab': tab='settings'; ui={ptab:el.dataset.v}; render(); window.scrollTo(0,0); return;
+    case 'more': ui.more=ui.more===el.dataset.id?null:el.dataset.id; break;
     case 'addSet': DRAFT.items[i].sets.push({kg:'',reps:'',done:false,rir:''}); draftSave(); break;
     case 'delSet': {const ss=DRAFT.items[i].sets; if(ss.length>1) ss.pop(); draftSave(); break}
     case 'swap': ui.swap=ui.swap===i?null:i; break;
