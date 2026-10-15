@@ -180,6 +180,21 @@ nav.tabs button[aria-current="page"]{color:var(--fg);box-shadow:inset 0 3px 0 va
 .ed-slot .row{grid-column:1/-1}
 .ed-slot select{width:100%}
 .ed-slot input{width:54px;text-align:center}
+.ring{--p:0;--c:var(--ok);border-radius:50%;background:conic-gradient(var(--c) calc(var(--p)*1%),var(--surface2) 0);display:grid;place-items:center;flex:none;position:relative}
+.ring::before{content:"";position:absolute;inset:7px;border-radius:50%;background:var(--surface)}
+.ring span{position:relative;font-weight:800;font-size:14px;font-variant-numeric:tabular-nums}
+.ready{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px;color:var(--fg)}
+.ready > div{flex:1;min-width:0}
+.mchips{display:flex;flex-wrap:wrap;gap:4px;margin:2px 0 6px}
+.mchip{--c:var(--ok);font-size:11px;font-weight:700;padding:2px 7px;border-radius:999px;color:var(--fg);background:color-mix(in srgb,var(--c) 22%,transparent);border:1px solid color-mix(in srgb,var(--c) 55%,transparent)}
+.scale{display:flex;align-items:center;gap:8px;font-size:12px;margin-top:4px}
+.scale i{flex:1;height:8px;border-radius:4px;background:linear-gradient(90deg,var(--hd),var(--hc),var(--ok))}
+.fc{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;text-align:center}
+.fc > div{display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px}
+.rtiles{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.rtile{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.rbar{height:6px;background:var(--surface2);border-radius:3px;overflow:hidden}
+.rbar i{display:block;height:100%}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head><body>
@@ -301,6 +316,209 @@ const SCHED={
 };
 const PRIO_TXT={1:'Akcent: klatka, ramiona, brzuch, łydki',2:'Akcent: barki, góra pleców, dwugłowe uda'};
 
+/* ---------- muscles, recovery model, extended exercise base (ported from the Emergent version) ---------- */
+const MUSCLE_NAME={klatka:'Klatka',barki:'Barki',plecy:'Plecy',kaptury:'Kaptury',biceps:'Biceps',triceps:'Triceps',przedramiona:'Przedramiona',brzuch:'Brzuch',czworoglowe:'Czworogłowe uda',dwuglowe:'Dwugłowe uda',posladki:'Pośladki',lydki:'Łydki'};
+const MUSCLES=Object.keys(MUSCLE_NAME);
+const TAU={klatka:26,barki:22,plecy:28,kaptury:22,biceps:20,triceps:20,przedramiona:18,brzuch:16,czworoglowe:30,dwuglowe:30,posladki:30,lydki:18}; // hours; big muscles recover slower
+const CAP=10; // fatigue units = 0% recovered
+const VER_FACTOR={HD:1.2,HC:1.1,VC:1.0,VD:0.9};
+const pm=s=>Object.fromEntries(s.split(' ').map(p=>[p.split(':')[0],parseFloat(p.split(':')[1])]));
+const EX_MUSCLES={
+ ohp:pm('barki:1 triceps:.5 kaptury:.3 brzuch:.2'),ohps:pm('barki:1 triceps:.5'),dbsw:pm('barki:1 triceps:.4'),dbsc:pm('barki:1 triceps:.5'),
+ pull:pm('plecy:1 biceps:.5 przedramiona:.3'),chin:pm('plecy:1 biceps:.7 przedramiona:.3'),
+ flat:pm('klatka:1 triceps:.6 barki:.4'),incl:pm('klatka:1 barki:.6 triceps:.5'),
+ bbrow:pm('plecy:1 kaptury:.5 biceps:.4 barki:.3'),crow1:pm('plecy:1 biceps:.4'),sdual:pm('plecy:1 biceps:.4 kaptury:.3'),sclose:pm('plecy:1 biceps:.4 kaptury:.3'),swide:pm('plecy:.8 kaptury:.6 barki:.5'),
+ squat:pm('czworoglowe:1 posladki:.8 dwuglowe:.3 brzuch:.3'),usmith:pm('czworoglowe:1 posladki:.8 dwuglowe:.3'),
+ dl:pm('dwuglowe:1 posladki:1 plecy:.6 kaptury:.5 przedramiona:.4'),tbdl:pm('posladki:1 czworoglowe:.6 dwuglowe:.7 plecy:.5 kaptury:.5'),
+ bbcurl:pm('biceps:1 przedramiona:.4'),bayes:pm('biceps:1'),hammer:pm('biceps:.8 przedramiona:.7'),halfdrag:pm('biceps:1'),revcurl:pm('przedramiona:1 biceps:.6'),
+ pushd:pm('triceps:1'),ezext:pm('triceps:1'),wood:pm('brzuch:1'),legr:pm('brzuch:1'),crunch:pm('brzuch:1'),
+ dblh:pm('barki:1'),dbls:pm('barki:1'),cls:pm('barki:1'),rdelt:pm('barki:1 kaptury:.3'),calf:pm('lydki:1'),fly:pm('klatka:1'),hamc:pm('dwuglowe:1'),legext:pm('czworoglowe:1')
+};
+// [id, name, Polish description, pattern, muscles, bodyweight?]
+const EXTRA_ROWS=[
+ ['arnold','Arnold press','Wyciskanie hantli siedząc z rotacją nadgarstków','vpush','barki:1 triceps:.4'],
+ ['landpress','Landmine press','Wyciskanie końca sztangi jednorącz (landmine)','vpush','barki:1 klatka:.4 triceps:.4 brzuch:.2'],
+ ['machsp','Machine shoulder press','Wyciskanie nad głowę na maszynie','vpush','barki:1 triceps:.5'],
+ ['smithohp','Smith OHP','Wyciskanie nad głowę siedząc na suwnicy Smitha','vpush','barki:1 triceps:.5'],
+ ['kbpress','KB press jednorącz','Wyciskanie kettlebell nad głowę jednorącz','vpush','barki:1 triceps:.4 brzuch:.3'],
+ ['pikepu','Pike push-up','Pompki w pozycji odwróconego V (na barki)','vpush','barki:1 triceps:.6',1],
+ ['pushpress','Push press','Wyciskanie sztangi nad głowę z podbiciem nóg','vpush','barki:1 triceps:.5 czworoglowe:.3'],
+ ['zpress','Z-press','Wyciskanie nad głowę siedząc na podłodze, bez oparcia','vpush','barki:1 triceps:.5 brzuch:.3'],
+ ['latpd','Lat pulldown szeroko','Ściąganie drążka wyciągu górnego szerokim nachwytem','vpull','plecy:1 biceps:.4'],
+ ['latpdv','Lat pulldown V-grip','Ściąganie wyciągu górnego wąskim uchwytem V','vpull','plecy:1 biceps:.5'],
+ ['latpdsa','Single-arm lat pulldown','Ściąganie wyciągu górnego jednorącz','vpull','plecy:1 biceps:.4'],
+ ['neutpu','Podciąganie neutralne','Podciąganie na drążku chwytem neutralnym (młotkowym)','vpull','plecy:1 biceps:.6 przedramiona:.3',1],
+ ['assistpu','Podciąganie z asystą','Podciąganie na maszynie z odciążeniem','vpull','plecy:1 biceps:.5'],
+ ['machpd','Machine pulldown','Ściąganie na maszynie z dźwigniami','vpull','plecy:1 biceps:.4'],
+ ['straightpd','Straight-arm pulldown','Ściąganie wyciągu górnego prostymi ramionami','vpull','plecy:1'],
+ ['pullover','DB pullover','Przenoszenie hantla za głowę leżąc na ławce','iso','plecy:.8 klatka:.6 triceps:.3'],
+ ['dbbench','DB bench press','Wyciskanie hantli na ławce płaskiej','hpush','klatka:1 triceps:.5 barki:.4'],
+ ['dbincl','DB incline press','Wyciskanie hantli na ławce skośnej (głową w górę)','hpush','klatka:1 barki:.6 triceps:.4'],
+ ['smithbench','Smith bench','Wyciskanie na ławce płaskiej na suwnicy Smitha','hpush','klatka:1 triceps:.6 barki:.4'],
+ ['smithincl','Smith incline','Wyciskanie na ławce skośnej na suwnicy Smitha','hpush','klatka:1 barki:.6 triceps:.5'],
+ ['machcp','Machine chest press','Wyciskanie na maszynie siedząc','hpush','klatka:1 triceps:.5 barki:.4'],
+ ['dips','Dipsy','Pompki na poręczach z pochyleniem do przodu','hpush','klatka:1 triceps:.8 barki:.4',1],
+ ['pushup','Pompki','Pompki klasyczne (z obciążeniem na plecach)','hpush','klatka:1 triceps:.6 barki:.4 brzuch:.2',1],
+ ['decline','Decline bench','Wyciskanie sztangi na ławce skośnej głową w dół','hpush','klatka:1 triceps:.6'],
+ ['cgbench','Close-grip bench','Wyciskanie sztangi wąskim chwytem na ławce płaskiej','hpush','triceps:1 klatka:.8 barki:.3'],
+ ['floorpress','Floor press','Wyciskanie sztangi leżąc na podłodze','hpush','klatka:.9 triceps:.8'],
+ ['dbrow','DB row jednorącz','Wiosłowanie hantlem jednorącz w podporze o ławkę','hpull','plecy:1 biceps:.4 kaptury:.3'],
+ ['csrow','Chest-supported row','Wiosłowanie hantlami w leżeniu przodem na ławce skośnej','hpull','plecy:1 kaptury:.5 barki:.3'],
+ ['tbar','T-bar row','Wiosłowanie końcem sztangi z uchwytem V','hpull','plecy:1 kaptury:.5 biceps:.4'],
+ ['pendlay','Pendlay row','Wiosłowanie sztangą z martwego punktu, tułów równolegle','hpull','plecy:1 kaptury:.5 biceps:.4'],
+ ['sealrow','Seal row','Wiosłowanie sztangą leżąc przodem na wysokiej ławce','hpull','plecy:1 kaptury:.5 barki:.3'],
+ ['machrow','Machine row','Wiosłowanie na maszynie z podparciem klatki','hpull','plecy:1 kaptury:.4 biceps:.4'],
+ ['invrow','Inverted row','Podciąganie australijskie (wiosłowanie w zwisie pod drążkiem)','hpull','plecy:1 biceps:.5 kaptury:.4',1],
+ ['meadows','Meadows row','Wiosłowanie końcem sztangi jednorącz','hpull','plecy:1 biceps:.4 przedramiona:.3'],
+ ['facepull','Face pull','Przyciąganie liny wyciągu do twarzy','iso','barki:1 kaptury:.6'],
+ ['frontsq','Front squat','Przysiad ze sztangą trzymaną z przodu','knee','czworoglowe:1 posladki:.6 brzuch:.4'],
+ ['hacksq','Hack squat','Przysiad na maszynie hack','knee','czworoglowe:1 posladki:.6'],
+ ['legpress','Leg press','Wypychanie ciężaru nogami na suwnicy','knee','czworoglowe:1 posladki:.7 dwuglowe:.3'],
+ ['goblet','Goblet squat','Przysiad z hantlem trzymanym przy klatce','knee','czworoglowe:1 posladki:.7 brzuch:.3'],
+ ['bss','Bulgarian split squat','Przysiad bułgarski z nogą zakroczną na ławce','knee','czworoglowe:1 posladki:.9 dwuglowe:.3'],
+ ['lunge','Walking lunge','Wykroki chodzone z hantlami','knee','czworoglowe:1 posladki:.8 dwuglowe:.3'],
+ ['stepup','Step-up','Wejścia na skrzynię z hantlami','knee','czworoglowe:1 posladki:.8'],
+ ['smithsq','Smith squat','Przysiad na suwnicy Smitha','knee','czworoglowe:1 posladki:.7'],
+ ['pendsq','Pendulum squat','Przysiad na maszynie wahadłowej','knee','czworoglowe:1 posladki:.5'],
+ ['sissy','Sissy squat','Przysiad z odchyleniem tułowia, kolana do przodu','iso','czworoglowe:1',1],
+ ['rdl','Romanian deadlift','Martwy ciąg rumuński ze sztangą','hip','dwuglowe:1 posladki:.9 plecy:.4'],
+ ['dbrdl','DB Romanian deadlift','Martwy ciąg rumuński z hantlami','hip','dwuglowe:1 posladki:.9 plecy:.3'],
+ ['sldl','Stiff-leg deadlift','Martwy ciąg na prostych nogach','hip','dwuglowe:1 posladki:.7 plecy:.5'],
+ ['sumo','Sumo deadlift','Martwy ciąg w szerokim rozstawie stóp','hip','posladki:1 dwuglowe:.7 czworoglowe:.6 plecy:.5 kaptury:.4'],
+ ['hipthrust','Hip thrust','Wypychanie bioder ze sztangą, plecy na ławce','hip','posladki:1 dwuglowe:.4'],
+ ['glutebr','Glute bridge','Unoszenie bioder leżąc na plecach','hip','posladki:1 dwuglowe:.4',1],
+ ['goodmorn','Good morning','Skłony ze sztangą na plecach','hip','dwuglowe:1 posladki:.7 plecy:.6'],
+ ['hyper','Hiperekstensja 45°','Prostowanie tułowia na ławce rzymskiej','hip','posladki:.9 dwuglowe:.8 plecy:.6',1],
+ ['kbswing','Kettlebell swing','Wymachy kettlebell z pracy bioder','hip','posladki:1 dwuglowe:.8 plecy:.4'],
+ ['pullthru','Cable pull-through','Przeciąganie liny wyciągu między nogami','hip','posladki:1 dwuglowe:.7'],
+ ['rackpull','Rack pull','Martwy ciąg z podwyższenia (od kolan)','hip','plecy:1 kaptury:.8 posladki:.6 dwuglowe:.5 przedramiona:.5'],
+ ['dbcurl','DB curl','Uginanie przedramion z hantlami z supinacją','iso','biceps:1 przedramiona:.3'],
+ ['inclcurl','Incline DB curl','Uginanie z hantlami siedząc na ławce skośnej','iso','biceps:1'],
+ ['preacher','Preacher curl','Uginanie łamanej sztangi na modlitewniku','iso','biceps:1'],
+ ['spider','Spider curl','Uginanie z hantlami leżąc przodem na ławce skośnej','iso','biceps:1'],
+ ['cablecurl','Cable curl','Uginanie przedramion na wyciągu dolnym','iso','biceps:1 przedramiona:.3'],
+ ['conccurl','Concentration curl','Uginanie jednorącz z łokciem opartym o udo','iso','biceps:1'],
+ ['ezcurl','EZ-bar curl','Uginanie przedramion łamaną sztangą stojąc','iso','biceps:1 przedramiona:.4'],
+ ['machcurl','Machine curl','Uginanie przedramion na maszynie','iso','biceps:1'],
+ ['zottman','Zottman curl','Uginanie z supinacją, opuszczanie nachwytem','iso','biceps:.8 przedramiona:.8'],
+ ['ohcable','Overhead cable extension','Prostowanie ramion nad głową z liną wyciągu','iso','triceps:1'],
+ ['skull','Skullcrusher','Francuskie wyciskanie łamanej sztangi leżąc','iso','triceps:1'],
+ ['dboh','DB overhead extension','Prostowanie ramienia z hantlem za głową','iso','triceps:1'],
+ ['ropepd','Rope pushdown','Prostowanie ramion z liną na wyciągu górnym','iso','triceps:1'],
+ ['kickback','Triceps kickback','Prostowanie ramienia w opadzie tułowia','iso','triceps:1'],
+ ['benchdip','Bench dip','Pompki w podporze tyłem o ławkę','iso','triceps:1 klatka:.3',1],
+ ['jmpress','JM press','Hybryda wyciskania wąskiego i francuskiego','iso','triceps:1 klatka:.4'],
+ ['machdip','Machine dip','Prostowanie ramion na maszynie do dipów','iso','triceps:1 klatka:.4'],
+ ['machlat','Machine lateral raise','Wznosy ramion bokiem na maszynie','iso','barki:1'],
+ ['leanlat','Lean-away lateral','Wznos hantla bokiem w odchyleniu, trzymając się poręczy','iso','barki:1'],
+ ['uprow','Upright row szeroko','Podciąganie sztangi wzdłuż tułowia szerokim chwytem','iso','barki:1 kaptury:.6 biceps:.3'],
+ ['yraise','Y-raise','Wznosy hantli w kształt litery Y leżąc na ławce skośnej','iso','barki:.9 kaptury:.5'],
+ ['revpec','Reverse pec deck','Odwrotne rozpiętki na maszynie (tył barku)','iso','barki:1 kaptury:.4'],
+ ['bentrdelt','Bent-over rear-delt raise','Odwrotne rozpiętki hantlami w opadzie tułowia','iso','barki:1 kaptury:.4'],
+ ['pecdeck','Pec deck','Rozpiętki na maszynie (butterfly)','iso','klatka:1'],
+ ['dbfly','DB fly','Rozpiętki z hantlami na ławce płaskiej','iso','klatka:1'],
+ ['crossover','Cable crossover','Krzyżowanie linek wyciągu stojąc','iso','klatka:1 barki:.3'],
+ ['lowhigh','Low-to-high cable fly','Rozpiętki na wyciągu od dołu do góry (góra klatki)','iso','klatka:1 barki:.4'],
+ ['standcalf','Standing calf raise','Wspięcia na palce stojąc na maszynie','iso','lydki:1'],
+ ['seatcalf','Seated calf raise','Wspięcia na palce siedząc na maszynie','iso','lydki:1'],
+ ['lpcalf','Leg press calf raise','Wspięcia na palce na suwnicy do wypychania','iso','lydki:1'],
+ ['sacalf','Single-leg calf raise','Wspięcia jednonóż z hantlem na stopniu','iso','lydki:1'],
+ ['seathamc','Seated leg curl','Uginanie nóg siedząc na maszynie','iso','dwuglowe:1'],
+ ['standhamc','Standing leg curl','Uginanie nogi stojąc na maszynie','iso','dwuglowe:1'],
+ ['nordic','Nordic curl','Opuszczanie tułowia z klęku z zablokowanymi stopami','iso','dwuglowe:1',1],
+ ['ballcurl','Swiss ball leg curl','Uginanie nóg leżąc z piętami na piłce','iso','dwuglowe:1 posladki:.4',1],
+ ['sllegext','Single-leg extension','Prostowanie nogi jednonóż na maszynie','iso','czworoglowe:1'],
+ ['cablecrunch','Cable crunch','Spięcia brzucha klęcząc z liną wyciągu (allahy)','iso','brzuch:1'],
+ ['abwheel','Ab wheel','Rolowanie kółkiem do ćwiczeń brzucha','iso','brzuch:1',1],
+ ['kneeraise','Hanging knee raise','Unoszenie kolan w zwisie lub na poręczach','iso','brzuch:1',1],
+ ['pallof','Pallof press','Wypychanie linki wyciągu przed siebie bez rotacji','iso','brzuch:1'],
+ ['declcrunch','Decline crunch','Spięcia brzucha na ławce skośnej','iso','brzuch:1',1],
+ ['russian','Russian twist','Skręty tułowia siedząc z obciążeniem','iso','brzuch:1'],
+ ['machcrunch','Machine crunch','Spięcia brzucha na maszynie','iso','brzuch:1'],
+ ['wristcurl','Wrist curl','Uginanie nadgarstków ze sztangą siedząc','iso','przedramiona:1'],
+ ['farmer',"Farmer's walk",'Spacer farmera z ciężkimi hantlami','iso','przedramiona:1 kaptury:.8 brzuch:.4'],
+ ['shrug','Barbell shrug','Unoszenie barków ze sztangą (szrugsy)','iso','kaptury:1 przedramiona:.3'],
+ ['dbshrug','DB shrug','Unoszenie barków z hantlami (szrugsy)','iso','kaptury:1 przedramiona:.3'],
+ ['smithshrug','Smith shrug','Unoszenie barków na suwnicy Smitha','iso','kaptury:1 przedramiona:.3'],
+ ['cableshrug','Cable shrug','Unoszenie barków z drążkiem wyciągu dolnego','iso','kaptury:1 przedramiona:.3'],
+ ['tbshrug','Trap bar shrug','Szrugsy ze sztangą heksagonalną','iso','kaptury:1 przedramiona:.4'],
+ ['machshrug','Machine shrug','Unoszenie barków na maszynie','iso','kaptury:1'],
+ ['kelso','Kelso shrug','Ściąganie łopatek z hantlami leżąc przodem na ławce skośnej','iso','kaptury:1 plecy:.4'],
+ ['highpull','Snatch-grip high pull','Dynamiczne podciąganie sztangi szerokim chwytem','iso','kaptury:1 barki:.5 posladki:.3'],
+ ['donkeycalf','Donkey calf raise','Wspięcia na palce w opadzie tułowia na maszynie','iso','lydki:1'],
+ ['smithseatcalf','Smith seated calf','Wspięcia siedząc ze sztangą Smitha na udach','iso','lydki:1'],
+ ['dbcalf','DB standing calf raise','Wspięcia obunóż z hantlami na stopniu','iso','lydki:1'],
+ ['bwcalf','Bodyweight calf raise','Wspięcia na palce na stopniu bez obciążenia, wolne tempo','iso','lydki:1',1],
+ ['hackcalf','Hack machine calf raise','Wspięcia na palce na maszynie hack','iso','lydki:1'],
+ ['jumprope','Skakanka','Skakanie na palcach (skakanka)','iso','lydki:1',1],
+ ['revwrist','Reverse wrist curl','Prostowanie nadgarstków nachwytem ze sztangą','iso','przedramiona:1'],
+ ['dbwrist','DB wrist curl','Uginanie nadgarstka z hantlem jednorącz','iso','przedramiona:1'],
+ ['cablewrist','Cable wrist curl','Uginanie nadgarstków na wyciągu dolnym','iso','przedramiona:1'],
+ ['deadhang','Dead hang','Zwis na drążku na czas (siła chwytu)','iso','przedramiona:1 plecy:.3',1],
+ ['platepinch','Plate pinch','Trzymanie talerzy chwytem szczypcowym','iso','przedramiona:1'],
+ ['suitcase','Suitcase carry','Spacer z hantlem w jednej ręce','iso','przedramiona:1 brzuch:.6 kaptury:.5'],
+ ['revcablecurl','Reverse cable curl','Uginanie przedramion nachwytem na wyciągu','iso','przedramiona:1 biceps:.6'],
+ ['ezrevcurl','EZ reverse curl','Uginanie przedramion nachwytem łamaną sztangą','iso','przedramiona:1 biceps:.6'],
+ ['ropehammer','Rope hammer curl','Uginanie chwytem młotkowym z liną wyciągu','iso','biceps:.8 przedramiona:.8'],
+ ['crosshammer','Cross-body hammer curl','Uginanie młotkowe hantlem w poprzek tułowia','iso','biceps:.8 przedramiona:.7']
+];
+const MLOW={czworoglowe:'czworogłowe uda',dwuglowe:'dwugłowe uda',posladki:'pośladki',lydki:'łydki'};
+for(const [id,name,pl,pattern,m,bw] of EXTRA_ROWS){
+  const mus=pm(m); EX_MUSCLES[id]=mus;
+  const focus=Object.entries(mus).filter(([,w])=>w>=.6).map(([k])=>MLOW[k]||k).join(', ');
+  EX[id]=[name,pattern,'',focus,bw?1:0]; PL[id]=pl;
+}
+// default muscle profile for user-made exercises, by movement pattern
+const PAT_MUSCLES={vpush:pm('barki:1 triceps:.5'),vpull:pm('plecy:1 biceps:.5'),hpush:pm('klatka:1 triceps:.6 barki:.4'),hpull:pm('plecy:1 biceps:.4 kaptury:.3'),knee:pm('czworoglowe:1 posladki:.7'),hip:pm('dwuglowe:1 posladki:.9 plecy:.4'),iso:{}};
+function musclesMap(exId){return EX_MUSCLES[exId]||(S.customEx&&S.customEx[exId]&&(S.customEx[exId][6]||PAT_MUSCLES[S.customEx[exId][1]]))||{}}
+const musclesOf=exId=>Object.entries(musclesMap(exId)).filter(([,w])=>w>=.5).map(([m])=>m);
+// alternatives: same primary muscle(s), ranked by muscle-profile similarity (+ bonus for same pattern)
+function alternativesFor(exId){
+  const a=musclesMap(exId), e=EXA(exId)||[], pat=e[1];
+  const vals=Object.values(a);
+  if(!vals.length) return allExIds().filter(id=>id!==exId&&EXA(id)[1]===pat).map(id=>({id,match:0}));
+  const max=Math.max(...vals), prim=Object.keys(a).filter(m=>a[m]===max);
+  const norm=w=>Math.sqrt(Object.values(w).reduce((s,x)=>s+x*x,0))||1, na=norm(a);
+  return allExIds().filter(id=>id!==exId).map(id=>{
+    const b=musclesMap(id); if(!prim.some(m=>(b[m]||0)>=.7)) return null;
+    let dot=0; for(const m of Object.keys(a)) dot+=a[m]*(b[m]||0);
+    const cos=dot/(na*norm(b));
+    return {id,match:Math.round(cos*100),rank:cos+(EXA(id)[1]===pat?.1:0)};
+  }).filter(x=>x&&x.match>=55).sort((x,y)=>y.rank-x.rank);
+}
+// training load per muscle for one session (sets × muscle weight × version factor)
+function sessionLoad(s){
+  if(s._load) return s._load;
+  const out=Object.fromEntries(MUSCLES.map(m=>[m,0]));
+  for(const it of s.items){
+    const n=it.sets.length||3, f=VER_FACTOR[it.ver]||1; // finished without logging still counts as done
+    for(const [m,w] of Object.entries(musclesMap(it.exId))) if(m in out) out[m]+=n*w*f;
+  }
+  Object.defineProperty(s,'_load',{value:out,enumerable:false,configurable:true});
+  return out;
+}
+function fatigueAt(m,at){
+  let f=0;
+  for(const s of SESS){const h=(at-s.date)/36e5; if(h<0||h>240) continue; f+=sessionLoad(s)[m]*Math.exp(-h/TAU[m]);}
+  return f;
+}
+function recovery(now=Date.now()){
+  return MUSCLES.map(m=>{
+    const pct=Math.max(0,Math.min(100,Math.round(100-fatigueAt(m,now)/CAP*100)));
+    let hoursTo90=0;
+    if(pct<90){for(let h=1;h<=240;h++){if(100-fatigueAt(m,now+h*36e5)/CAP*100>=90){hoursTo90=h;break}}}
+    let lastHit=null; for(let i=SESS.length-1;i>=0;i--){if(sessionLoad(SESS[i])[m]>0&&SESS[i].date<=now){lastHit=SESS[i].date;break}}
+    return {m,pct,hoursTo90,lastHit};
+  });
+}
+// red → amber → green
+function recColor(p){p=Math.max(0,Math.min(100,p));
+  if(p<=50) return `color-mix(in srgb, var(--hc) ${Math.round(p/50*100)}%, var(--hd))`;
+  if(p<=90) return `color-mix(in srgb, var(--ok) ${Math.round((p-50)/40*100)}%, var(--hc))`;
+  return 'var(--ok)';
+}
+function ring(p,size,label){return `<div class="ring" style="--p:${p};--c:${recColor(p)};width:${size}px;height:${size}px" role="img" aria-label="${label||'Gotowość'} ${p}%"><span>${p}%</span></div>`}
+
 /* ---------- plan library ---------- */
 // Built-in templates: the six Szostek Balance FBW plans. Slot keys stay "A:flat" etc. so cycle state is shared with v1.
 const BUILTIN=[];
@@ -385,7 +603,7 @@ function plan(){return allPlans().find(p=>p.id===S.activePlan)||BUILTIN[0]}
 function EXA(id){return EX[id]||(S.customEx&&S.customEx[id])||null}
 function exName(id){const e=EXA(id);return e?e[0]:id}
 function exPL(id){return PL[id]||((S.customEx[id]||[])[5])||''}
-function exVideo(id){const e=EXA(id);if(!e||!e[2])return '';return /^https?:/.test(e[2])?e[2]:'https://youtu.be/'+e[2]}
+function exVideo(id){const e=EXA(id);if(!e)return '';if(!e[2])return 'https://www.youtube.com/results?search_query='+encodeURIComponent(e[0]+' technika');return /^https?:/.test(e[2])?e[2]:'https://youtu.be/'+e[2]}
 function allExIds(){return Object.keys(EX).concat(Object.keys(S.customEx||{}))}
 function seq(){const p=plan();return p.schedule?p.schedule.flat().filter(Boolean):(p.order&&p.order.length?p.order:p.trNames)}
 function nextTr(){const s=seq();return s[S.seqPos%s.length]}
@@ -448,6 +666,12 @@ function viewToday(){
   </section>
   <div class="datebox"><div><div class="label">Data treningu</div><b>${dateTxt}</b></div>
     ${ui.dateEdit?`<div class="row"><input type="date" id="trDate" value="${DRAFT.date||isoDay(Date.now())}" max="${isoDay(Date.now())}" aria-label="Data treningu"><button type="button" class="sbtn" data-act="dateToday">Dziś</button></div>`:`<button type="button" class="link" data-act="dateEdit">Zmień</button>`}</div>`;
+  if(SESS.length){
+    const rec=recovery(), dm=[...new Set(DRAFT.items.flatMap(it=>musclesOf(it.exId)))];
+    const rf=rec.filter(r=>dm.includes(r.m)).sort((a,b)=>a.pct-b.pct);
+    const ready=rf.length?Math.round(rf.reduce((a,r)=>a+r.pct,0)/rf.length):100;
+    html+=`<button type="button" class="ready" data-act="goRecovery">${ring(ready,58,'Gotowość mięśni')}<div><div class="label">Gotowość mięśni na ${esc(tr)}</div><div style="font-size:14px">${rf.slice(0,3).map(r=>`${MUSCLE_NAME[r.m]} <b style="color:${recColor(r.pct)}">${r.pct}%</b>`).join(' · ')||'Wszystko gotowe'}</div></div><span class="muted">›</span></button>`;
+  }
   if(!S.settings.chosen){
     html+=`<div class="notice"><b>Najpierw wybierz plan.</b><span>Teraz pokazuję ${esc(p.name)}. Plany są w zakładce Plan → Biblioteka.</span><div><button type="button" class="btn ghost" data-act="tab" data-tab="settings">Wybierz plan</button></div></div>`;
   }
@@ -458,16 +682,18 @@ function viewToday(){
     html+=`<div class="notice"><b>Masz wpisane serie w ${esc(tr)}.</b><span>Przejście na ${esc(ui.switchTo)} usunie je z tego treningu.</span>
       <div class="row"><button type="button" class="btn danger" data-act="switchYes">Zmień na ${esc(ui.switchTo)}</button><button type="button" class="btn ghost" data-act="switchNo">Zostań przy ${esc(tr)}</button></div></div>`;
   }
+  const recNow=SESS.length?Object.fromEntries(recovery().map(r=>[r.m,r])):null;
   DRAFT.items.forEach((it,idx)=>{
     const e=EXA(it.exId)||['?','iso','','',0], v=VERS[it.ver], last=lastFor(it.exId,it.ver), goal=last?last.kg+Number(S.settings.inc||1.25):null;
     const cyc=it.cy.map(x=>`<b class="${x===it.ver?'cur':''}">${x}</b>`).join('<span>›</span>');
-    const alts=allExIds().filter(k=>EXA(k)[1]===e[1]&&k!==it.exId);
+    const alts=alternativesFor(it.exId).slice(0,24);
     const vid=exVideo(it.exId);
     html+=`<article class="ex" aria-label="${esc(e[0])}">
       <div class="ex-head"><div>
         <div class="label">${PAT[e[1]]||'Ćwiczenie'}</div>
         <div class="ex-name">${esc(e[0])}</div>
         <div class="ex-pl">${esc(exPL(it.exId))}</div>
+        ${recNow?`<div class="mchips">${musclesOf(it.exId).map(m=>{const r=recNow[m];return `<span class="mchip" style="--c:${recColor(r.pct)}" title="Gotowość ${r.pct}%">${MUSCLE_NAME[m]} ${r.pct}%</span>`}).join('')}</div>`:''}
         <div class="ex-meta"><span>${esc(e[3]||'')}</span>${vid?`<a href="${esc(vid)}" target="_blank" rel="noopener">Instruktaż ▸</a>`:''}</div>
       </div>
       <button type="button" class="ver v-${it.ver}" data-act="vpick" data-i="${idx}" aria-label="Wersja ${it.ver}, zmień">${it.ver}<small>${it.sets.length} ${it.sets.length===1?'SERIA':it.sets.length<5?'SERIE':'SERII'}</small></button></div>
@@ -488,7 +714,7 @@ function viewToday(){
         <button type="button" class="tick" data-act="tick" data-i="${idx}" data-s="${si}" aria-pressed="${st.done}" aria-label="Seria ${si+1} zrobiona">✓</button>
       </div>`).join('')}</div>
       <div class="ex-foot"><button type="button" class="link" data-act="swap" data-i="${idx}">Zamienniki (${alts.length}) ${ui.swap===idx?'▴':'▾'}</button><span class="row"><button type="button" class="link" data-act="delSet" data-i="${idx}">– seria</button><button type="button" class="link" data-act="addSet" data-i="${idx}">+ seria</button></span></div>
-      ${ui.swap===idx?`<div class="subs">${it.exId!==it.def?`<button type="button" data-act="swapTo" data-i="${idx}" data-ex="${it.def}"><b>↺ ${esc(exName(it.def))}</b><small>wróć do ćwiczenia z planu</small></button>`:''}${alts.filter(k=>k!==it.def).map(k=>`<button type="button" data-act="swapTo" data-i="${idx}" data-ex="${k}"><b>${esc(exName(k))}</b><small>${esc(exPL(k))}${EXA(k)[3]?' · '+esc(EXA(k)[3]):''}</small></button>`).join('')}</div>`:''}
+      ${ui.swap===idx?`<div class="subs">${it.exId!==it.def?`<button type="button" data-act="swapTo" data-i="${idx}" data-ex="${it.def}"><b>↺ ${esc(exName(it.def))}</b><small>wróć do ćwiczenia z planu</small></button>`:''}${alts.filter(x=>x.id!==it.def).map(x=>`<button type="button" data-act="swapTo" data-i="${idx}" data-ex="${x.id}"><b>${esc(exName(x.id))}</b>${x.match?` <span class="muted">${x.match}% zgodności</span>`:''}<small>${esc(exPL(x.id))}${EXA(x.id)[3]?' · '+esc(EXA(x.id)[3]):''}</small></button>`).join('')}</div>`:''}
     </article>`;
   });
   html+=`<button type="button" class="btn wide" data-act="finish">Zakończ trening ${esc(tr)}</button>
@@ -498,7 +724,8 @@ function viewToday(){
 
 function viewHistory(){
   if(!SESS.length) return `<h2>Historia</h2><div class="empty">Brak zapisanych treningów.<br>Zakończ pierwszy trening, a pojawi się tutaj razem z wersjami i ciężarami.</div>`;
-  let html=`<h2>Historia</h2>`;
+  let html=`<h2>Historia</h2><div class="seg" role="group"><button type="button" data-act="hview" data-v="list" aria-pressed="${ui.hview!=='rec'}">Treningi</button><button type="button" data-act="hview" data-v="rec" aria-pressed="${ui.hview==='rec'}">Regeneracja</button></div>`;
+  if(ui.hview==='rec') return html+viewRecovery();
   const exIds=[...new Set(SESS.flatMap(s=>s.items.map(i=>i.exId)))];
   html+=`<details><summary>Postępy ćwiczeń</summary><div style="display:flex;flex-direction:column;gap:14px;margin-top:10px">`;
   for(const id of exIds){
@@ -521,6 +748,19 @@ function viewHistory(){
   return html;
 }
 
+function viewRecovery(){
+  const rec=recovery(), avg=Math.round(rec.reduce((a,r)=>a+r.pct,0)/rec.length);
+  const sorted=[...rec].sort((a,b)=>a.pct-b.pct), tired=sorted.filter(r=>r.pct<85).slice(0,3);
+  const fc=[24,48,72].map(h=>{const r=recovery(Date.now()+h*36e5);return Math.round(r.reduce((a,x)=>a+x.pct,0)/r.length)});
+  let h=`<div class="ex"><div class="row" style="gap:16px;flex-wrap:nowrap">${ring(avg,92,'Gotowość ogólna')}<div><div class="label">Gotowość ogólna</div><div style="font-family:var(--display);font-size:34px;font-weight:800;color:${recColor(avg)}">${avg}%</div><div style="font-size:14px">${tired.length?'Najbardziej zmęczone: '+tired.map(r=>MUSCLE_NAME[r.m].toLowerCase()).join(', '):'Wszystkie partie gotowe do treningu'}</div></div></div>
+    <div class="scale"><span class="muted">zmęczone</span><i></i><span class="muted">gotowe</span></div></div>
+  <div class="ex"><div class="label">Prognoza</div><div class="fc">${[['Teraz',avg],['+24 h',fc[0]],['+48 h',fc[1]],['+72 h',fc[2]]].map(([l,v])=>`<div>${ring(v,56,l)}<span class="muted">${l}</span></div>`).join('')}</div></div>
+  <div class="rtiles">${sorted.map(r=>`<div class="rtile"><div class="row" style="justify-content:space-between"><b>${MUSCLE_NAME[r.m]}</b><b style="color:${recColor(r.pct)}">${r.pct}%</b></div>
+    <div class="rbar"><i style="width:${r.pct}%;background:${recColor(r.pct)}"></i></div>
+    <span class="muted" style="font-size:12px">${r.pct>=90?'gotowe':'90% za ~'+(r.hoursTo90>=48?Math.round(r.hoursTo90/24)+' dni':r.hoursTo90+' h')}${r.lastHit?' · ostatnio '+dstr(r.lastHit):''}</span></div>`).join('')}</div>
+  <p class="muted" style="font-size:13px;margin:0">Szacunek na podstawie liczby serii, wersji (HD i HC obciążają mocniej) i czasu od treningu. Liczy się data treningu, nie moment wpisania. Duże partie regenerują się dłużej niż małe.</p>`;
+  return h;
+}
 function exOptions(sel){
   const groups={};for(const k of allExIds()){const g=EXA(k)[1];(groups[g]=groups[g]||[]).push(k)}
   return Object.keys(PAT).filter(g=>groups[g]).map(g=>`<optgroup label="${PAT[g]}">${groups[g].map(k=>`<option value="${k}"${k===sel?' selected':''}>${esc(exName(k))}</option>`).join('')}</optgroup>`).join('');
@@ -545,6 +785,7 @@ function viewEditor(p){
       <input type="text" id="nx-name" placeholder="Nazwa, np. Hip thrust">
       <input type="text" id="nx-pl" placeholder="Opis po polsku (opcjonalnie)">
       <select id="nx-pat">${Object.keys(PAT).map(k=>`<option value="${k}">${PAT[k]}</option>`).join('')}</select>
+      <select id="nx-mus" aria-label="Główna partia"><option value="">Główna partia: według rodzaju ruchu</option>${MUSCLES.map(m=>`<option value="${m}">Główna partia: ${MUSCLE_NAME[m]}</option>`).join('')}</select>
       <input type="text" id="nx-vid" placeholder="Link do instruktażu (opcjonalnie)">
       <label class="row" style="font-size:14px"><input type="checkbox" id="nx-bw"> masa ciała (ciężar to obciążenie dodatkowe)</label>
       <div class="row"><button type="button" class="sbtn acc" data-act="nxSave">Dodaj ćwiczenie</button><button type="button" class="sbtn" data-act="nxCancel">Anuluj</button></div></div>`;
@@ -695,6 +936,8 @@ document.addEventListener('click',e=>{
     case 'setPos': {const L=seq().length, k=+el.dataset.k; S.seqPos=S.seqPos-(S.seqPos%L)+k; S.settings.chosen=true;
       resetDraftIfEmpty(); persist(); ensureDraft(); draftSave(); toast(`Kolejny trening: ${nextTr()}`); break}
     case 'dateEdit': ui.dateEdit=true; break;
+    case 'goRecovery': tab='history'; ui={hview:'rec'}; render(); window.scrollTo(0,0); return;
+    case 'hview': ui.hview=el.dataset.v; break;
     case 'dateToday': DRAFT.date=null; ui.dateEdit=false; draftSave(); break;
     case 'vpick': ui.vpick=ui.vpick===i?null:i; break;
     case 'setVer': {const it=DRAFT.items[i], v=el.dataset.v, n=S.cycles[it.key]||0, L=it.cy.length, idx=it.cy.indexOf(v);
@@ -736,7 +979,7 @@ document.addEventListener('click',e=>{
     case 'nxOpen': ui.newEx=true; break;
     case 'nxCancel': ui.newEx=false; break;
     case 'nxSave': {const name=$('#nx-name').value.trim(); if(!name){toast('Wpisz nazwę ćwiczenia');return}
-      const id=rid('x'); S.customEx[id]=[name,$('#nx-pat').value,$('#nx-vid').value.trim(),'',$('#nx-bw').checked?1:0,$('#nx-pl').value.trim()];
+      const id=rid('x'); S.customEx[id]=[name,$('#nx-pat').value,$('#nx-vid').value.trim(),'',$('#nx-bw').checked?1:0,$('#nx-pl').value.trim(),$('#nx-mus').value?{[$('#nx-mus').value]:1}:null];
       ui.newEx=false; persist(); toast('Dodano „'+name+'” do bazy ćwiczeń'); break}
     case 'planDel': ui.delPlan=ui.edit; break;
     case 'planDelNo': ui.delPlan=null; break;
