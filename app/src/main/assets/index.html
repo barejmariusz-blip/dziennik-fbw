@@ -203,6 +203,9 @@ nav.tabs button[aria-current="page"]{color:var(--fg);box-shadow:inset 0 3px 0 va
 .lmode{display:flex;gap:4px;align-items:center;flex-wrap:wrap;font-size:12px;margin:2px 0 6px}
 .lmode button{border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:3px 10px;font-size:12px;font-weight:700}
 .lmode button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.rir{display:flex;align-items:center;gap:4px;padding-left:24px;font-size:12px;color:var(--muted);margin-top:-2px}
+.rir button{min-width:34px;border:1px solid var(--line);background:var(--surface2);border-radius:999px;padding:3px 8px;font-size:12px;font-weight:700}
+.rir button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head><body>
@@ -627,13 +630,15 @@ function curVer(sl){const n=S.cycles[sl.key]||0;return sl.cy[n%sl.cy.length]}
 function loadKind(exId){return +((EXA(exId)||[])[4]||0)}
 function assistMode(exId){const k=loadKind(exId);return k===2||(k===1&&(S.loadMode||{})[exId]==='assist')}
 function showKg(exId,kg){if(isNaN(kg))return '?';if(kg<0)return 'asysta '+fmt(-kg)+' kg';const k=loadKind(exId);if(k&&kg===0)return k===2?'bez asysty':'masa ciała';return (k===1?'+':'')+fmt(kg)+' kg'}
+function effKg(exId,kg,bw){bw=bw==null?Number(S.settings.bw||0):bw;return (loadKind(exId)&&bw>0&&!isNaN(kg))?bw+kg:null}
+const rirTxt=r=>(r===undefined||r===null||r==='')?'':' RIR '+r;
 function shortKg(kg){return isNaN(kg)?'?':kg<0?'as.'+fmt(-kg):fmt(kg)}
 function goalTxt(exId,g){if(g===null)return 'pierwszy raz';if(assistMode(exId)||g<0)return g>=0?'bez asysty':'≤ '+fmt(-g)+' kg asysty';return '≥ '+(loadKind(exId)===1?'+':'')+fmt(g)+' kg'}
 function kgShown(exId,v){if(!assistMode(exId)||v==='')return v;const n=num(v);return isNaN(n)?v:fmt(Math.abs(n))}
 function lastFor(exId,ver){
   for(let i=SESS.length-1;i>=0;i--){const it=SESS[i].items.find(x=>x.exId===exId&&x.ver===ver);
     if(it){let best=null;for(const s of it.sets){if(!isNaN(s.kg)&&(best===null||s.kg>best.kg||(s.kg===best.kg&&s.reps>best.reps)))best=s}
-      if(best) return {kg:best.kg,reps:best.reps,date:SESS[i].date}}}
+      if(best) return {kg:best.kg,reps:best.reps,rir:best.rir,date:SESS[i].date,bw:SESS[i].bw}}}
   return null;
 }
 function goalFor(exId,ver){const l=lastFor(exId,ver);return l?l.kg+Number(S.settings.inc||1.25):null}
@@ -642,7 +647,7 @@ function wElapsed(){if(!DRAFT||!DRAFT.startedAt)return 0;const end=DRAFT.pausedA
 const fmtClock=ms=>{const t=Math.floor(ms/1000),h=Math.floor(t/3600),m=Math.floor(t%3600/60),x=t%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(x).padStart(2,'0')};
 const fmtDur=ms=>{const m=Math.round(ms/60000);return m>=60?Math.floor(m/60)+' h '+(m%60)+' min':m+' min'};
 function buildDraft(tr){
-  DRAFT={v:3,plan:S.activePlan,tr,date:null,startedAt:null,pausedAt:null,pausedMs:0,items:slotsFor(tr).map(sl=>({key:sl.key,def:sl.def,cy:sl.cy,exId:sl.exId,ver:curVer(sl),sets:Array.from({length:sl.sets},()=>({kg:'',reps:'',done:false}))}))};
+  DRAFT={v:3,plan:S.activePlan,tr,date:null,startedAt:null,pausedAt:null,pausedMs:0,items:slotsFor(tr).map(sl=>({key:sl.key,def:sl.def,cy:sl.cy,exId:sl.exId,ver:curVer(sl),sets:Array.from({length:sl.sets},()=>({kg:'',reps:'',done:false,rir:''}))}))};
 }
 function ensureDraft(){
   if(DRAFT&&(DRAFT.v!==3||DRAFT.plan!==S.activePlan||!trainings().includes(DRAFT.tr))&&!draftHasData()) DRAFT=null;
@@ -726,8 +731,8 @@ function viewToday(){
       <div class="cyc"><span>Cykl:</span>${cyc}</div>
       <div class="target">
         <div><div class="label">Powtórzenia</div><div class="v">${v.reps}</div></div>
-        <div><div class="label">Ostatnio ${it.ver}</div><div class="v">${last?showKg(it.exId,last.kg)+' × '+(isNaN(last.reps)?'?':last.reps):'—'}</div>${last?`<div class="muted">${dstr(last.date)}</div>`:''}</div>
-        <div class="goal"><div class="label">Cel dziś</div><div class="v">${goalTxt(it.exId,goal)}</div><div class="muted">przerwa ${v.rest}</div></div>
+        <div><div class="label">Ostatnio ${it.ver}</div><div class="v">${last?showKg(it.exId,last.kg)+' × '+(isNaN(last.reps)?'?':last.reps)+rirTxt(last.rir):'—'}</div>${last?`<div class="muted">${dstr(last.date)}${effKg(it.exId,last.kg,last.bw||null)!==null?' · efektywnie '+fmt(effKg(it.exId,last.kg,last.bw||null))+' kg':''}</div>`:''}</div>
+        <div class="goal"><div class="label">Cel dziś</div><div class="v">${goalTxt(it.exId,goal)}</div><div class="muted">${goal!==null&&effKg(it.exId,goal)!==null?'efektywnie '+fmt(effKg(it.exId,Math.min(goal,assistMode(it.exId)?0:goal)))+' kg · ':''}przerwa ${v.rest}</div></div>
       </div>
       <div class="sets">${it.sets.map((st,si)=>`<div class="set${st.done?' done':''}">
         <span class="n">${si+1}</span>
@@ -737,7 +742,7 @@ function viewToday(){
         <span class="x">×</span>
         <label class="inp"><input id="rp-${idx}-${si}" inputmode="numeric" autocomplete="off" aria-label="Powtórzenia seria ${si+1}" data-i="${idx}" data-s="${si}" data-f="reps" value="${esc(st.reps)}" placeholder="pow."><span></span></label>
         <button type="button" class="tick" data-act="tick" data-i="${idx}" data-s="${si}" aria-pressed="${st.done}" aria-label="Seria ${si+1} zrobiona">✓</button>
-      </div>`).join('')}</div>
+      </div>${st.done&&S.settings.rir!==false?`<div class="rir" role="group" aria-label="RIR seria ${si+1}"><span>RIR (zapas):</span>${['0','1','2','3','4'].map(r=>`<button type="button" data-act="rir" data-i="${idx}" data-s="${si}" data-v="${r}" aria-pressed="${String(st.rir)===r}">${r==='4'?'4+':r}</button>`).join('')}</div>`:''}`).join('')}</div>
       <div class="ex-foot"><button type="button" class="link" data-act="swap" data-i="${idx}">Zamienniki (${alts.length}) ${ui.swap===idx?'▴':'▾'}</button><span class="row"><button type="button" class="link" data-act="delSet" data-i="${idx}">– seria</button><button type="button" class="link" data-act="addSet" data-i="${idx}">+ seria</button></span></div>
       ${ui.swap===idx?`<div class="subs">${it.exId!==it.def?`<button type="button" data-act="swapTo" data-i="${idx}" data-ex="${it.def}"><b>↺ ${esc(exName(it.def))}</b><small>wróć do ćwiczenia z planu</small></button>`:''}${alts.filter(x=>x.id!==it.def).map(x=>`<button type="button" data-act="swapTo" data-i="${idx}" data-ex="${x.id}"><b>${esc(exName(x.id))}</b>${x.match?` <span class="muted">${x.match}% zgodności</span>`:''}<small>${esc(exPL(x.id))}${EXA(x.id)[3]?' · '+esc(EXA(x.id)[3]):''}</small></button>`).join('')}</div>`:''}
     </article>`;
@@ -755,10 +760,10 @@ function viewHistory(){
   html+=`<details><summary>Postępy ćwiczeń</summary><div style="display:flex;flex-direction:column;gap:14px;margin-top:10px">`;
   for(const id of exIds){
     const rows=['HD','VC','HC','VD'].map(v=>{
-      const ent=SESS.flatMap(s=>s.items.filter(i=>i.exId===id&&i.ver===v).map(i=>({d:s.date,kg:Math.max(...i.sets.map(x=>isNaN(x.kg)?-Infinity:x.kg))}))).filter(x=>isFinite(x.kg));
+      const ent=SESS.flatMap(s=>s.items.filter(i=>i.exId===id&&i.ver===v).map(i=>({d:s.date,bw:s.bw,kg:Math.max(...i.sets.map(x=>isNaN(x.kg)?-Infinity:x.kg))}))).filter(x=>isFinite(x.kg));
       if(!ent.length) return '';
       const l=ent[ent.length-1], best=Math.max(...ent.map(x=>x.kg));
-      return `<tr><td>${vBadge(v)}</td><td>${showKg(id,l.kg)}</td><td>${showKg(id,best)}</td><td>${ent.length}</td><td>${dstr(l.d)}</td></tr>`;
+      return `<tr><td>${vBadge(v)}</td><td>${showKg(id,l.kg)}${effKg(id,l.kg,l.bw||null)!==null?` <span class="muted">(${fmt(effKg(id,l.kg,l.bw||null))})</span>`:''}</td><td>${showKg(id,best)}</td><td>${ent.length}</td><td>${dstr(l.d)}</td></tr>`;
     }).join('');
     if(rows) html+=`<div><b>${esc(exName(id))}</b><div class="tbl"><table><thead><tr><th>Wersja</th><th>Ostatnio</th><th>Rekord</th><th>Razy</th><th>Data</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   }
@@ -766,7 +771,7 @@ function viewHistory(){
   for(const s of [...SESS].reverse()){
     const pn=(allPlans().find(p=>p.id===s.plan)||{}).name||(s.days?`${s.days} dni / P${s.prio}`:'');
     html+=`<article class="sess"><div class="sess-h"><b>${esc(s.tr)}</b><span class="muted">${dlong(s.date)} · ${esc(pn)}${s.dur?' · '+fmtDur(s.dur):''}</span></div>
-      <ul>${s.items.map(i=>`<li>${vBadge(i.ver)}<span><span>${esc(exName(i.exId))}</span> <span class="s">${i.sets.length?i.sets.map(x=>shortKg(x.kg)+'×'+(isNaN(x.reps)?'?':x.reps)).join(', '):'zrobione, bez zapisu serii'}</span></span></li>`).join('')}</ul>
+      <ul>${s.items.map(i=>`<li>${vBadge(i.ver)}<span><span>${esc(exName(i.exId))}</span> <span class="s">${i.sets.length?i.sets.map(x=>shortKg(x.kg)+'×'+(isNaN(x.reps)?'?':x.reps)+rirTxt(x.rir)).join(', '):'zrobione, bez zapisu serii'}</span></span></li>`).join('')}</ul>
       ${ui.delId===s.id?`<div class="row"><span class="muted">Usunąć ten trening? Cykle cofną się o jeden krok.</span><button type="button" class="btn danger" data-act="delYes" data-id="${s.id}">Usuń</button><button type="button" class="btn ghost" data-act="delNo">Anuluj</button></div>`:`<div><button type="button" class="link" data-act="del" data-id="${s.id}">Usuń trening</button></div>`}
     </article>`;
   }
@@ -830,6 +835,8 @@ function viewSettings(){
   }
   html+=`<div><button type="button" class="btn ghost" data-act="planNew">+ Nowy plan</button></div>
     <span class="muted" style="font-size:13px">Szablonów nie da się zmieniać. „Kopiuj” robi z szablonu własny plan do edycji, a cykle wersji i ciężary przechodzą razem z nim.</span></div>
+  <div class="field"><label class="label" for="bw">Masa ciała (kg)</label><input id="bw" inputmode="decimal" placeholder="np. 82" value="${S.settings.bw?fmt(S.settings.bw):''}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px"><span class="muted" style="font-size:13px">Opcjonalnie. Dla ćwiczeń z masą ciała apka pokaże obciążenie efektywne, np. 82 kg − 20 kg asysty = 62 kg. Każdy trening zapamiętuje masę z dnia, w którym go zapisałeś.</span></div>
+  <div class="field"><span class="label">RIR przy seriach</span><div class="seg" role="group"><button type="button" data-act="rirOn" data-v="1" aria-pressed="${S.settings.rir!==false}">Pokazuj</button><button type="button" data-act="rirOn" data-v="0" aria-pressed="${S.settings.rir===false}">Ukryj</button></div><span class="muted" style="font-size:13px">Po odhaczeniu serii możesz dotknąć, ile powtórzeń zostało w zapasie (0 = do upadku). Nieobowiązkowe: bez wyboru nic się nie zapisuje.</span></div>
   <div class="field"><label class="label" for="inc">Minimalny przyrost ciężaru (kg)</label><input id="inc" inputmode="decimal" value="${fmt(S.settings.inc)}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px"></div>
   <div class="field"><span class="label">Stan cykli</span><div class="tbl"><table><thead><tr><th>Tr.</th><th>Ćwiczenie</th><th>Teraz</th><th>Potem</th></tr></thead><tbody>`;
   const seen=new Set();
@@ -909,9 +916,9 @@ async function exportJson(){
 }
 async function exportCsv(){
   const q2=v=>{v=String(v);return /[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
-  const rows=[['Data','Trening','Plan','Ćwiczenie','Wersja','Seria','Ciężar kg (ujemny = asysta)','Powtórzenia','Czas treningu min']];
+  const rows=[['Data','Trening','Plan','Ćwiczenie','Wersja','Seria','Ciężar kg (ujemny = asysta)','Powtórzenia','RIR','Masa ciała kg','Czas treningu min']];
   for(const s of SESS){const d=new Date(s.date).toLocaleDateString('pl-PL'), pn=(allPlans().find(p=>p.id===s.plan)||{}).name||(s.days?s.days+' dni P'+s.prio:'');
-    for(const it of s.items) it.sets.forEach((x,i)=>rows.push([d,s.tr,pn,exName(it.exId),it.ver,i+1,isNaN(x.kg)?'':fmt(x.kg),isNaN(x.reps)?'':x.reps,s.dur?Math.round(s.dur/60000):'']))}
+    for(const it of s.items) it.sets.forEach((x,i)=>rows.push([d,s.tr,pn,exName(it.exId),it.ver,i+1,isNaN(x.kg)?'':fmt(x.kg),isNaN(x.reps)?'':x.reps,x.rir==null?'':x.rir,s.bw?fmt(s.bw):'',s.dur?Math.round(s.dur/60000):'']))}
   const r=await saveFile('dziennik-fbw-'+stamp()+'.csv','﻿'+rows.map(r=>r.map(q2).join(';')).join('\r\n'),'text/csv');
   if(r==='ok') toast('Plik CSV zapisany w Pobranych'); else if(r==='fail') toast('Nie udało się zapisać pliku');
 }
@@ -936,13 +943,14 @@ function dupPlan(src){
 
 /* ---------- actions ---------- */
 function finish(){
-  const items=DRAFT.items.map(it=>({key:it.key,exId:it.exId,ver:it.ver,sets:it.sets.filter(s=>s.done||(s.kg!==''&&s.reps!=='')).map(s=>({kg:num(s.kg),reps:num(s.reps)}))}));
+  const items=DRAFT.items.map(it=>({key:it.key,exId:it.exId,ver:it.ver,sets:it.sets.filter(s=>s.done||(s.kg!==''&&s.reps!=='')).map(s=>{const o={kg:num(s.kg),reps:num(s.reps)}; if(s.rir!==''&&s.rir!=null) o.rir=+s.rir; return o})}));
   const s=seq(), L=s.length, cur=S.seqPos%L;
   let step=1; if(s[cur]!==DRAFT.tr){for(let k=1;k<=L;k++){if(s[(cur+k)%L]===DRAFT.tr){step=k+1;break}}}
   const when=DRAFT.date?new Date(DRAFT.date+'T12:00').getTime():Date.now();
   const p=plan();
   const sess={id:rid('s'),date:when,tr:DRAFT.tr,plan:p.id,days:p.days,prio:p.prio,seqStep:step,items};
   if(DRAFT.startedAt) sess.dur=wElapsed();
+  if(Number(S.settings.bw)>0) sess.bw=Number(S.settings.bw);
   for(const it of items) S.cycles[it.key]=(S.cycles[it.key]||0)+1;
   S.seqPos+=step;
   SESS.push(sess); SESS.sort((x,y)=>x.date-y.date);
@@ -989,7 +997,9 @@ document.addEventListener('click',e=>{
         if(!DRAFT.startedAt&&!DRAFT.hinted){DRAFT.hinted=1;toast('Licznik treningu stoi. Włącz go przyciskiem Rozpocznij.')} }
       else st.done=false;
       draftSave(); break}
-    case 'addSet': DRAFT.items[i].sets.push({kg:'',reps:'',done:false}); draftSave(); break;
+    case 'rir': {const st=DRAFT.items[i].sets[+el.dataset.s]; st.rir=String(st.rir)===el.dataset.v?'':el.dataset.v; draftSave(); break}
+    case 'rirOn': S.settings.rir=el.dataset.v==='1'; persist(); break;
+    case 'addSet': DRAFT.items[i].sets.push({kg:'',reps:'',done:false,rir:''}); draftSave(); break;
     case 'delSet': {const ss=DRAFT.items[i].sets; if(ss.length>1) ss.pop(); draftSave(); break}
     case 'swap': ui.swap=ui.swap===i?null:i; break;
     case 'swapTo': {const it=DRAFT.items[i], to=el.dataset.ex, p=plan(), k=swapKey(p,it.key);
@@ -1045,6 +1055,7 @@ document.addEventListener('input',e=>{
   const t=e.target;
   if(t.dataset&&t.dataset.f&&DRAFT){let v=t.value; if(t.dataset.f==='kg'&&t.dataset.as==='1'){v=v.trim().replace(/^-/,''); if(v!==''&&num(v)!==0) v='-'+v}
     DRAFT.items[+t.dataset.i].sets[+t.dataset.s][t.dataset.f]=v; draftSave()}
+  if(t.id==='bw'){const v=num(t.value); S.settings.bw=(v>0&&v<400)?v:null; clearTimeout(t._h); t._h=setTimeout(persist,600)}
   if(t.id==='inc'){const v=num(t.value); if(v>0){S.settings.inc=v; clearTimeout(t._h); t._h=setTimeout(persist,600)}}
   if(t.dataset&&t.dataset.ed){const p=editPlan(); if(!p) return; const ed=t.dataset.ed;
     if(ed==='name'){p.name=t.value; clearTimeout(t._h); t._h=setTimeout(persist,600)}
