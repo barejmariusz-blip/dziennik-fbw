@@ -278,6 +278,9 @@ body.ct{padding-bottom:calc(270px + env(safe-area-inset-bottom,0px))}
 .cres .inp input{padding:7px 4px;text-align:center;font-size:14px}
 .cres .inp span{position:static;transform:none;display:block;text-align:center;font-size:10px;margin-top:2px}
 .ex.cardio .tick{width:100%;font-size:14px}
+.pprev{width:100%;display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:8px;font-size:13px}
+.pprev p{margin:0}
+.pprev ul{margin:4px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:3px}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head><body>
@@ -1011,6 +1014,19 @@ function viewRecovery(){
   <p class="muted" style="font-size:13px;margin:0">Szacunek na podstawie liczby serii, wersji (HD i HC obciążają mocniej) i czasu od treningu. Liczy się data treningu, nie moment wpisania. Duże partie regenerują się dłużej niż małe.</p>`;
   return h;
 }
+function slotLine(sl){
+  if(sl.cardio){const t=Object.assign({},CDEF[sl.cardio],sl.target||{});
+    return `<li><b>Cardio: ${esc(exName(sl.ex))}</b> · ${sl.cardio} ${sl.cardio==='LISS'?t.min+' min':(sl.cardio==='MIX'?t.lissMin+' min + ':'')+t.rounds+'× '+fmtClock(t.work*1000)+'/'+fmtClock(t.rest*1000)}</li>`}
+  const how=sl.reps?`${sl.sets} × ${esc(sl.reps)}`:`${sl.sets} ${sl.sets===1?'seria':sl.sets<5?'serie':'serii'} · ${sl.cy.join(' › ')}`;
+  return `<li><b>${esc(exName(sl.ex))}</b> · ${how}<div class="muted" style="font-size:12px">${esc(exPL(sl.ex))}</div></li>`}
+function planPreview(x){
+  const dn=['Pn','Wt','Śr','Cz','Pt','So','Nd'];
+  let rot='';
+  if(x.schedule){rot=x.schedule.map((w,wi)=>(x.schedule.length>1?`Tydz. ${wi+1}: `:'')+w.map((t,i)=>t?dn[i]+' '+esc(t):'').filter(Boolean).join(', ')).join('<br>')}
+  else rot='Rotacja: '+(x.order||x.trNames).map(esc).join(' → ');
+  return `<div class="pprev">${x.note?`<p>${esc(x.note)}</p>`:''}<div class="muted" style="font-size:12px">${rot}</div>
+    ${x.trNames.map(t=>`<div><div class="label">Trening ${esc(t)}</div><ul>${(x.trainings[t]||[]).map(slotLine).join('')||'<li class="muted">brak ćwiczeń</li>'}</ul></div>`).join('')}</div>`;
+}
 function exOptions(sel){
   const groups={};for(const k of allExIds()){const g=EXA(k)[1];if(g==='cardio')continue;(groups[g]=groups[g]||[]).push(k)}
   return Object.keys(PAT).filter(g=>groups[g]).map(g=>`<optgroup label="${PAT[g]}">${groups[g].map(k=>`<option value="${k}"${k===sel?' selected':''}>${esc(exName(k))}</option>`).join('')}</optgroup>`).join('');
@@ -1057,7 +1073,9 @@ function viewSettings(){
   html+=`<div class="field"><span class="label">Biblioteka treningów</span>`;
   for(const x of allPlans()){
     html+=`<div class="plan-item${x.id===p.id?' active':''}" style="flex-wrap:wrap">${ui.rename===x.id?`<div class="rename"><input type="text" id="rn-${x.id}" value="${esc(x.name)}" aria-label="Nowa nazwa planu"><button type="button" class="sbtn acc" data-act="renameSave" data-id="${x.id}">Zapisz</button><button type="button" class="sbtn" data-act="renameNo">Anuluj</button></div>`:`<div><b>${esc(x.name)}</b><span class="muted" style="font-size:12px">${x.builtin?'Szablon':'Własny plan'} · ${x.trNames.map(esc).join(', ')}</span></div>`}
-      <div class="row"><button type="button" class="sbtn" data-act="rename" data-id="${x.id}" aria-label="Zmień nazwę">✎ Nazwa</button>${x.id!==p.id?`<button type="button" class="sbtn acc" data-act="planUse" data-id="${x.id}">Wybierz</button>`:''}${x.builtin?`<button type="button" class="sbtn" data-act="planDup" data-id="${x.id}">Kopiuj</button>`:`<button type="button" class="sbtn" data-act="planEdit" data-id="${x.id}">Edytuj</button>`}</div></div>`;
+      <div class="row"><button type="button" class="sbtn" data-act="preview" data-id="${x.id}" aria-expanded="${ui.preview===x.id}">${ui.preview===x.id?'▴ Zwiń':'👁 Podgląd'}</button><button type="button" class="sbtn" data-act="rename" data-id="${x.id}" aria-label="Zmień nazwę">✎ Nazwa</button>${x.id!==p.id?`<button type="button" class="sbtn acc" data-act="planUse" data-id="${x.id}">Wybierz</button>`:''}${x.builtin?`<button type="button" class="sbtn" data-act="planDup" data-id="${x.id}">Kopiuj</button>`:`<button type="button" class="sbtn" data-act="planEdit" data-id="${x.id}">Edytuj</button>`}</div>
+      ${ui.useAsk===x.id?`<div class="notice" style="width:100%"><b>Przełączyć na „${esc(x.name)}”?</b><span>Historia, ciężary i cykle zostają. Miejsce w obecnym planie zostanie zapamiętane, więc po powrocie wrócisz tam, gdzie skończyłeś.</span><div class="row"><button type="button" class="btn" data-act="planUseYes" data-id="${x.id}">Przełącz</button><button type="button" class="btn ghost" data-act="planUseNo">Anuluj</button></div></div>`:''}
+      ${ui.preview===x.id?planPreview(x):''}</div>`;
   }
   html+=`<div><button type="button" class="btn ghost" data-act="planNew">+ Nowy plan</button></div>
     <span class="muted" style="font-size:13px">Nazwę każdego planu zmienisz przyciskiem „✎ Nazwa”. Ćwiczeń w szablonach nie da się zmieniać. „Kopiuj” robi z szablonu własny plan do edycji, a cykle wersji i ciężary przechodzą razem z nim.</span></div>
@@ -1266,7 +1284,11 @@ document.addEventListener('click',e=>{
       SESS.splice(k,1); S.deleted=[...(S.deleted||[]),id]; ui.delId=null;
       if(DRAFT&&!draftHasData()) DRAFT=null;
       persist(); cloudDo(()=>prof().collection('sessions').doc(id).delete()); toast('Usunięto trening'); break}
-    case 'planUse': {S.activePlan=el.dataset.id; S.seqPos=0; S.settings.chosen=true; ui.edit=null; resetDraftIfEmpty(); persist(); toast('Aktywny plan: '+plan().name); break}
+    case 'planUse': ui.useAsk=el.dataset.id; break;
+    case 'planUseNo': ui.useAsk=null; break;
+    case 'planUseYes': {S.planPos=S.planPos||{}; S.planPos[S.activePlan]=S.seqPos; S.activePlan=el.dataset.id; S.seqPos=S.planPos[S.activePlan]||0;
+      S.settings.chosen=true; ui.edit=null; ui.useAsk=null; resetDraftIfEmpty(); persist(); toast('Aktywny plan: '+plan().name); break}
+    case 'preview': ui.preview=ui.preview===el.dataset.id?null:el.dataset.id; break;
     case 'planDup': {const src=allPlans().find(x=>x.id===el.dataset.id); const np=dupPlan(src); S.plans.push(np); ui.edit=np.id; persist(); toast('Skopiowano jako własny plan'); window.scrollTo(0,0); break}
     case 'planNew': {const np={id:rid('p'),name:'Mój plan',trNames:['A','B'],trainings:{A:[],B:[]},order:['A','B']}; S.plans.push(np); ui.edit=np.id; persist(); window.scrollTo(0,0); break}
     case 'planEdit': ui.edit=el.dataset.id; ui.delPlan=null; window.scrollTo(0,0); break;
