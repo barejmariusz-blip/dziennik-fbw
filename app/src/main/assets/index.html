@@ -810,11 +810,12 @@ function repRange(it){if(it.reps)return it.sets.length+' × '+it.reps;if(!REP_OP
 function itemInc(it){return it&&it.inc!=null?Number(it.inc):Number(S.settings.inc||1.25)}
 // "Add weight every N trainings": executions of an exercise are grouped in blocks of N; a version gets +inc only
 // when its previous execution was in an earlier block. N=1 = literal PDF rule (+inc on every return to a version).
-// Linear-progression plans (StrongLifts etc.) and bodyweight rep progression keep their own rule.
-function everyN(){return Math.max(1,parseInt(S.settings.every,10)||4)}
+// Applies to every plan (linear plans have a 1-step cycle, so N=1 = +inc every session). N=0 = never add weight.
+function everyN(){const v=parseInt(S.settings.every,10);return isNaN(v)?4:Math.max(0,v)}
 function incFor(it){const base=itemInc(it);
-  if(!it||it.inc!=null||!it.cy||it.cy[0]==='LP') return base;
-  const n=S.cycles[it.key]||0, L=it.cy.length, N=everyN(); if(n<L) return base;
+  if(!it) return base; const N=everyN(); if(N===0) return 0;
+  if(!it.cy) return base;
+  const n=S.cycles[it.key]||0, L=it.cy.length; if(n<L) return base;
   return Math.floor((n-L)/N)===Math.floor(n/N)?0:base}
 function goalFor(exId,ver,inc){const l=lastFor(exId,ver);return l?l.kg+(inc==null?Number(S.settings.inc||1.25):inc):null}
 function draftHasData(){return !!DRAFT&&(!!DRAFT.startedAt||DRAFT.items.some(it=>it.sets.some(s=>s.done||s.kg!==''||s.reps!==''))||(DRAFT.cardio||[]).some(c=>c.done||c.tmin!==''||c.km!==''))}
@@ -1090,7 +1091,7 @@ function viewSettings(){
   <div class="field"><label class="label" for="bw">Masa ciała (kg)</label><input id="bw" inputmode="decimal" placeholder="np. 82" value="${S.settings.bw?fmt(S.settings.bw):''}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px"><span class="muted" style="font-size:13px">Opcjonalnie. Dla ćwiczeń z masą ciała apka pokaże obciążenie efektywne, np. 82 kg − 20 kg asysty = 62 kg. Każdy trening zapamiętuje masę z dnia, w którym go zapisałeś.</span></div>
   <div class="field"><span class="label">RIR przy seriach</span><div class="seg" role="group"><button type="button" data-act="rirOn" data-v="1" aria-pressed="${S.settings.rir!==false}">Pokazuj</button><button type="button" data-act="rirOn" data-v="0" aria-pressed="${S.settings.rir===false}">Ukryj</button></div><span class="muted" style="font-size:13px">Po odhaczeniu serii możesz dotknąć, ile powtórzeń zostało w zapasie (0 = do upadku). Nieobowiązkowe: bez wyboru nic się nie zapisuje.</span></div>
   <div class="field"><label class="label" for="inc">Minimalny przyrost ciężaru (kg)</label><input id="inc" inputmode="decimal" value="${fmt(S.settings.inc)}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px"></div>
-  <div class="field"><label class="label" for="every">Dodawaj ciężar co … treningów</label><div class="row"><input id="every" inputmode="numeric" value="${everyN()}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;width:80px;font-size:16px"><span class="muted">treningów z danym ćwiczeniem</span></div><span class="muted" style="font-size:13px">Przy 4: ćwiczenia z cyklem HD›VC›HC›VD dostają przyrost przy każdym powrocie do wersji, a izolacje VC›VD co drugi raz. Przy 1: dosłownie jak w PDF, czyli przyrost za każdym razem. Plany z progresją liniową (StrongLifts i podobne) mają własną regułę.</span></div>
+  <div class="field"><label class="label" for="every">Dodawaj ciężar co … treningów</label><div class="row"><input id="every" inputmode="numeric" value="${everyN()}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;width:80px;font-size:16px"><span class="muted">treningów z danym ćwiczeniem</span></div><span class="muted" style="font-size:13px">Przy 4: ćwiczenia z cyklem HD›VC›HC›VD dostają przyrost przy każdym powrocie do wersji, a izolacje VC›VD co drugi raz. Przy 1: przyrost za każdym razem, czyli dosłownie jak w PDF i jak w StrongLifts. Przy 0: bez żadnego przyrostu. Działa dla wszystkich planów.</span></div>
   <div class="field"><span class="label">Stan cykli</span><div class="tbl"><table><thead><tr><th>Tr.</th><th>Ćwiczenie</th><th>Teraz</th><th>Potem</th></tr></thead><tbody>`;
   const seen=new Set();
   for(const t of p.trNames){
@@ -1341,7 +1342,7 @@ document.addEventListener('input',e=>{
   if(t.dataset&&t.dataset.f&&DRAFT){let v=t.value; if(t.dataset.f==='kg'&&t.dataset.as==='1'){v=v.trim().replace(/^-/,''); if(v!==''&&num(v)!==0) v='-'+v}
     DRAFT.items[+t.dataset.i].sets[+t.dataset.s][t.dataset.f]=v; draftSave()}
   if(t.id==='bw'){const v=num(t.value); S.settings.bw=(v>0&&v<400)?v:null; clearTimeout(t._h); t._h=setTimeout(persist,600)}
-  if(t.id==='every'){const v=parseInt(t.value,10); if(v>=1&&v<=20){S.settings.every=v; clearTimeout(t._h); t._h=setTimeout(persist,600)}}
+  if(t.id==='every'){const v=parseInt(t.value,10); if(v>=0&&v<=20){S.settings.every=v; clearTimeout(t._h); t._h=setTimeout(persist,600)}}
   if(t.id==='inc'){const v=num(t.value); if(v>0){S.settings.inc=v; clearTimeout(t._h); t._h=setTimeout(persist,600)}}
   if(t.dataset&&t.dataset.ed){const p=editPlan(); if(!p) return; const ed=t.dataset.ed;
     if(ed==='name'){p.name=t.value; clearTimeout(t._h); t._h=setTimeout(persist,600)}
