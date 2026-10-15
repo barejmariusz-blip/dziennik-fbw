@@ -24,6 +24,7 @@
   --hd:#ff8352; --hc:#f2b544; --vc:#34d6bd; --vd:#82a9ff; --ok:#8fcf5c; --warn:#f2b544; color-scheme:dark}
 
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 html,body{background:var(--bg)}
 body{color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.45;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
@@ -78,7 +79,7 @@ button.day{border:1px solid var(--line);font:inherit;font-size:12px;font-weight:
   color:var(--c);background:color-mix(in srgb,var(--c) 14%,transparent);border:1.5px solid color-mix(in srgb,var(--c) 45%,transparent);
   border-radius:10px;padding:6px 10px 4px;min-width:64px;text-align:center}
 .ver small{display:block;font-family:var(--body);font-size:9px;font-weight:700;letter-spacing:.1em;opacity:.85;margin-top:2px}
-.v-HD{--c:var(--hd)} .v-HC{--c:var(--hc)} .v-VC{--c:var(--vc)} .v-VD{--c:var(--vd)}
+.v-HD{--c:var(--hd)} .v-HC{--c:var(--hc)} .v-VC{--c:var(--vc)} .v-VD{--c:var(--vd)} .v-LP{--c:var(--accent)}
 .vmini{--c:var(--muted);font-family:var(--display);font-weight:800;font-size:15px;color:var(--c);letter-spacing:.04em;
   background:color-mix(in srgb,var(--c) 14%,transparent);border-radius:5px;padding:1px 6px}
 .cyc{display:flex;gap:4px;align-items:center;font-size:12px;color:var(--muted)}
@@ -294,7 +295,8 @@ const VERS={
   HD:{reps:'0-1 (max) / 1-3 / 1-5',rest:'2–3 min',min:120,max:180},
   VC:{reps:'6-8 / 8-10',rest:'1–2 min',min:60,max:120},
   HC:{reps:'1-3 / 3-6',rest:'2–3 min',min:120,max:180},
-  VD:{reps:'6-8 / 8-10 / 10-20',rest:'1 min',min:60,max:60}
+  VD:{reps:'6-8 / 8-10 / 10-20',rest:'1 min',min:60,max:60},
+  LP:{reps:'wg planu',rest:'2–3 min',min:120,max:180}
 };
 const PAT={vpush:'Pchnięcie w pionie',vpull:'Ściąganie w pionie',hpush:'Pchnięcie w poziomie',hpull:'Ściąganie w poziomie',knee:'Zgięcie kolana',hip:'Zgięcie biodra',iso:'Izolacja'};
 // id: [name, pattern, youtube id, focus, bodyweight]
@@ -400,6 +402,19 @@ const EX_MUSCLES={
 };
 // [id, name, Polish description, pattern, muscles, bodyweight?]
 const EXTRA_ROWS=[
+ ['bwsquat','Przysiad bez obciążenia','Przysiad z masą ciała, pełny zakres','knee','czworoglowe:1 posladki:.7',1],
+ ['plank','Plank','Deska: podpór na przedramionach, ciało w linii (na czas)','iso','brzuch:1',1],
+ ['diamondpu','Pompki diamentowe','Pompki z dłońmi złączonymi w romb pod klatką','hpush','triceps:1 klatka:.7 barki:.3',1],
+ ['negpu','Negatywy podciągania','Powolne opuszczanie z pozycji brody nad drążkiem (3–5 s)','vpull','plecy:1 biceps:.6 przedramiona:.3',1],
+ ['pistol','Przysiad jednonóż (pistol)','Przysiad na jednej nodze, druga wyprostowana z przodu; progresja z podparciem','knee','czworoglowe:1 posladki:.8 brzuch:.2',1],
+ ['hswall','Stanie na rękach przy ścianie','Stanie na rękach tyłem lub przodem do ściany (na czas)','iso','barki:1 triceps:.4 kaptury:.3',1],
+ ['parpu','Pompki na paralletkach','Pompki na uchwytach z głębszym zejściem','hpush','klatka:1 triceps:.6 barki:.4',1],
+ ['tuckfl','Front lever – tuck','Zwis tyłem do ziemi z kolanami przy klatce, ciało poziomo (na czas)','iso','plecy:1 brzuch:.6 biceps:.3',1],
+ ['muneg','Negatywy muscle-upa','Powolne zejście z podporu nad drążkiem przez przejście do zwisu','vpull','plecy:1 triceps:.6 klatka:.4 biceps:.4',1],
+ ['pllean','Planche lean','Podpór z pochyleniem barków przed dłonie (na czas)','iso','barki:1 klatka:.4 brzuch:.4',1],
+ ['pppu','Pompki pseudo-planche','Pompki z dłońmi przy biodrach i pochyleniem do przodu','hpush','barki:.9 klatka:.8 triceps:.6',1],
+ ['lsit','L-sit','Podpór na poręczach lub podłodze z nogami prosto przed sobą (na czas)','iso','brzuch:1 triceps:.3',1],
+ ['jumpsq','Przysiady skoczne','Przysiad z dynamicznym wyskokiem','knee','czworoglowe:1 posladki:.7 lydki:.4',1],
  ['arnold','Arnold press','Wyciskanie hantli siedząc z rotacją nadgarstków','vpush','barki:1 triceps:.4'],
  ['landpress','Landmine press','Wyciskanie końca sztangi jednorącz (landmine)','vpush','barki:1 klatka:.4 triceps:.4 brzuch:.2'],
  ['machsp','Machine shoulder press','Wyciskanie nad głowę na maszynie','vpush','barki:1 triceps:.5'],
@@ -526,6 +541,7 @@ const EXTRA_ROWS=[
  ['ropehammer','Rope hammer curl','Uginanie chwytem młotkowym z liną wyciągu','iso','biceps:.8 przedramiona:.8'],
  ['crosshammer','Cross-body hammer curl','Uginanie młotkowe hantlem w poprzek tułowia','iso','biceps:.8 przedramiona:.7']
 ];
+const TIMED=new Set(['plank','hswall','tuckfl','pllean','lsit','deadhang']);
 const MLOW={czworoglowe:'czworogłowe uda',dwuglowe:'dwugłowe uda',posladki:'pośladki',lydki:'łydki'};
 for(const [id,name,pl,pattern,m,bw] of EXTRA_ROWS){
   const mus=pm(m); EX_MUSCLES[id]=mus;
@@ -594,7 +610,35 @@ for(const d of [3,4,5]) for(const p of [1,2]){
   }
   BUILTIN.push({id:'sz-'+d+'-'+p,builtin:true,days:d,prio:p,name:`Szostek Balance FBW · ${d} dni · P${p}`,note:PRIO_TXT[p],trNames:Object.keys(SETS[d]),trainings,schedule:SCHED[d]});
 }
-const CYCLES=[['HD','VC','HC','VD'],['VC','HC','VD','HD'],['HC','VD','HD','VC'],['VD','HD','VC','HC'],['VC','VD'],['VD','VC'],['HD','HC'],['HC','HD'],['HD'],['VC'],['HC'],['VD']];
+// Linear-progression templates: every slot has the single neutral version LP, its own target reps (r)
+// and increment (inc; 0 = progress by reps/variant, used for bodyweight work)
+function lpPlan(id,name,note,trs,schedule){
+  const trainings={};
+  for(const [tr,list] of Object.entries(trs)) trainings[tr]=list.map(([ex,sets,r,inc])=>({key:id+':'+tr+':'+ex,ex,cy:['LP'],sets,reps:r,inc}));
+  BUILTIN.push({id,builtin:true,name,note,trNames:Object.keys(trs),trainings,schedule});
+}
+lpPlan('sl5x5','StrongLifts 5×5','Siła dla początkujących. Przyrost +2,5 kg co trening, martwy ciąg +5 kg.',{
+  A:[['squat',5,'5',2.5],['flat',5,'5',2.5],['bbrow',5,'5',2.5]],
+  B:[['squat',5,'5',2.5],['ohp',5,'5',2.5],['dl',1,'5',5]]},[['A',0,'B',0,'A',0,0],['B',0,'A',0,'B',0,0]]);
+lpPlan('ss','Starting Strength','Siła dla początkujących. +2,5 kg, martwy ciąg +5 kg. Zaawansowani mogą w B podmienić martwy ciąg na power clean 5×3.',{
+  A:[['squat',3,'5',2.5],['flat',3,'5',2.5],['dl',1,'5',5]],
+  B:[['squat',3,'5',2.5],['ohp',3,'5',2.5],['dl',1,'5',5]]},[['A',0,'B',0,'A',0,0],['B',0,'A',0,'B',0,0]]);
+lpPlan('ppl','Push Pull Legs','Masa i siła. 3 dni w tygodniu albo 6 (dwa razy cała rotacja). Sztanga +2,5 kg, martwy ciąg +5 kg, reszta wg przyrostu z ustawień.',{
+  Push:[['flat',4,'6-8',2.5],['ohp',3,'8-10',2.5],['dbincl',3,'10'],['dbfly',3,'12'],['skull',3,'12']],
+  Pull:[['dl',3,'5',5],['pull',3,'max',0],['bbrow',4,'8',2.5],['latpd',3,'12'],['bbcurl',3,'12']],
+  Legs:[['squat',4,'6-8',2.5],['frontsq',3,'8',2.5],['lunge',3,'10'],['standcalf',4,'15'],['hamc',3,'12']]},[['Push',0,'Pull',0,'Legs',0,0]]);
+lpPlan('kal1','Kalistenika – podstawy','Od zera, full body 3× w tygodniu. Gdy zrobisz górny zakres powtórzeń we wszystkich seriach, przejdź na trudniejszy wariant (Zamienniki).',{
+  FBW:[['pushup',3,'8-12',0],['invrow',3,'8-12',0],['bwsquat',3,'15-20',0],['benchdip',3,'8-12',0],['plank',3,'30-60 s',0],['glutebr',3,'15',0]]},[['FBW',0,'FBW',0,'FBW',0,0]]);
+lpPlan('kal2','Kalistenika – średniozaawansowany','Push / Pull / Legs z masą ciała, 3–4 treningi w tygodniu. Progresja przez powtórzenia i trudniejsze warianty, a gdy jest łatwo, przez obciążenie.',{
+  Push:[['pushup',4,'12-20',0],['diamondpu',3,'8-12',0],['dips',3,'8-12',0],['pikepu',3,'8',0]],
+  Pull:[['pull',4,'5-10',0],['chin',3,'6-10',0],['invrow',3,'12',0],['negpu',3,'5',0]],
+  Legs:[['bss',3,'10',0],['lunge',3,'12',0],['pistol',3,'6',0],['sacalf',3,'15',0]]},[['Push',0,'Pull',0,'Legs',0,0]]);
+lpPlan('kal3','Kalistenika – droga do skilli','Pod umiejętności: handstand, front lever, planche, muscle-up. 4 treningi w tygodniu. Czasy w sekundach wpisuj w pole powtórzeń.',{
+  Handstand:[['hswall',4,'20-40 s',0],['pikepu',4,'8',0],['dips',4,'8-12',0],['parpu',3,'10',0]],
+  'Front lever':[['tuckfl',4,'10-15 s',0],['pull',4,'6-10',0],['invrow',4,'8',0],['muneg',3,'3',0]],
+  Planche:[['pllean',4,'15-30 s',0],['pppu',3,'8',0],['lsit',4,'10-20 s',0],['kneeraise',3,'12',0]],
+  Nogi:[['pistol',3,'5',0],['jumpsq',3,'10',0],['lunge',3,'12',0],['bwcalf',4,'20',0]]},[['Handstand','Front lever',0,'Planche','Nogi',0,0]]);
+const CYCLES=[['LP'],['HD','VC','HC','VD'],['VC','HC','VD','HD'],['HC','VD','HD','VC'],['VD','HD','VC','HC'],['VC','VD'],['VD','VC'],['HD','HC'],['HC','HD'],['HD'],['VC'],['HC'],['VD']];
 const rid=(p)=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
 /* ---------- state ---------- */
@@ -672,10 +716,10 @@ function allExIds(){return Object.keys(EX).concat(Object.keys(S.customEx||{}))}
 function seq(){const p=plan();return p.schedule?p.schedule.flat().filter(Boolean):(p.order&&p.order.length?p.order:p.trNames)}
 function nextTr(){const s=seq();return s[S.seqPos%s.length]}
 function trainings(){return plan().trNames}
-function swapKey(p,key){return p.builtin?p.prio+':'+key:p.id+'|'+key}
+function swapKey(p,key){return p.builtin&&p.prio?p.prio+':'+key:p.id+'|'+key}
 function slotsFor(tr){
   const p=plan();
-  return (p.trainings[tr]||[]).map(sl=>({key:sl.key,def:sl.ex,cy:sl.cy,sets:sl.sets,exId:S.swaps[swapKey(p,sl.key)]||sl.ex}));
+  return (p.trainings[tr]||[]).map(sl=>({key:sl.key,def:sl.ex,cy:sl.cy,sets:sl.sets,reps:sl.reps,inc:sl.inc,exId:S.swaps[swapKey(p,sl.key)]||sl.ex}));
 }
 function curVer(sl){const n=S.cycles[sl.key]||0;return sl.cy[n%sl.cy.length]}
 // load kind (EX[...][4]): 0 = weight, 1 = bodyweight (+ added weight or − assistance), 2 = assisted machine (value = assistance)
@@ -698,13 +742,14 @@ function lastFor(exId,ver){
       if(best) return {kg:best.kg,reps:best.reps,rir:best.rir,date:SESS[i].date,bw:SESS[i].bw}}}
   return null;
 }
-function goalFor(exId,ver){const l=lastFor(exId,ver);return l?l.kg+Number(S.settings.inc||1.25):null}
+function itemInc(it){return it&&it.inc!=null?Number(it.inc):Number(S.settings.inc||1.25)}
+function goalFor(exId,ver,inc){const l=lastFor(exId,ver);return l?l.kg+(inc==null?Number(S.settings.inc||1.25):inc):null}
 function draftHasData(){return !!DRAFT&&(!!DRAFT.startedAt||DRAFT.items.some(it=>it.sets.some(s=>s.done||s.kg!==''||s.reps!=='')))}
 function wElapsed(){if(!DRAFT||!DRAFT.startedAt)return 0;const end=DRAFT.pausedAt||Date.now();return Math.max(0,end-DRAFT.startedAt-(DRAFT.pausedMs||0))}
 const fmtClock=ms=>{const t=Math.floor(ms/1000),h=Math.floor(t/3600),m=Math.floor(t%3600/60),x=t%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(x).padStart(2,'0')};
 const fmtDur=ms=>{const m=Math.round(ms/60000);return m>=60?Math.floor(m/60)+' h '+(m%60)+' min':m+' min'};
 function buildDraft(tr){
-  DRAFT={v:3,plan:S.activePlan,tr,date:null,startedAt:null,pausedAt:null,pausedMs:0,items:slotsFor(tr).map(sl=>({key:sl.key,def:sl.def,cy:sl.cy,exId:sl.exId,ver:curVer(sl),sets:Array.from({length:sl.sets},()=>({kg:'',reps:'',done:false,rir:''}))}))};
+  DRAFT={v:3,plan:S.activePlan,tr,date:null,startedAt:null,pausedAt:null,pausedMs:0,items:slotsFor(tr).map(sl=>({key:sl.key,def:sl.def,cy:sl.cy,reps:sl.reps,inc:sl.inc,exId:sl.exId,ver:curVer(sl),sets:Array.from({length:sl.sets},()=>({kg:'',reps:'',done:false,rir:''}))}))};
 }
 function ensureDraft(){
   if(DRAFT&&(DRAFT.v!==3||DRAFT.plan!==S.activePlan||!trainings().includes(DRAFT.tr))&&!draftHasData()) DRAFT=null;
@@ -720,7 +765,7 @@ function applyLook(){
 
 /* ---------- views ---------- */
 function chartSVG(exId,sel){
-  const VS=['HD','VC','HC','VD'], series={};
+  const VS=['HD','VC','HC','VD','LP'], series={};
   for(const s of SESS)for(const it of s.items)if(it.exId===exId){const m=Math.max(...it.sets.map(x=>isNaN(x.kg)?-Infinity:x.kg));if(isFinite(m))(series[it.ver]=series[it.ver]||[]).push({t:s.date,kg:m})}
   const have=VS.filter(v=>series[v]);
   if(!have.length) return `<div class="chart"><span class="muted" style="font-size:13px">Brak zapisanych ciężarów. Wykres pojawi się po pierwszym treningu z tym ćwiczeniem.</span></div>`;
@@ -798,7 +843,7 @@ function viewToday(){
   }
   const recNow=SESS.length?Object.fromEntries(recovery().map(r=>[r.m,r])):null;
   DRAFT.items.forEach((it,idx)=>{
-    const e=EXA(it.exId)||['?','iso','','',0], v=VERS[it.ver], last=lastFor(it.exId,it.ver), goal=last?last.kg+Number(S.settings.inc||1.25):null;
+    const e=EXA(it.exId)||['?','iso','','',0], v=VERS[it.ver]||VERS.LP, last=lastFor(it.exId,it.ver), goal=last?last.kg+itemInc(it):null, byReps=it.inc===0;
     const cyc=it.cy.map(x=>`<b class="${x===it.ver?'cur':''}">${x}</b>`).join('<span>›</span>');
     const alts=alternativesFor(it.exId).slice(0,24);
     const vid=exVideo(it.exId);
@@ -808,16 +853,16 @@ function viewToday(){
         <button type="button" class="ex-name" data-act="chart" data-i="${idx}" aria-expanded="${ui.chart===idx}">${esc(e[0])}</button>
         <div class="ex-pl">${esc(exPL(it.exId))}</div>
         ${recNow?`<div class="mchips">${musclesOf(it.exId).map(m=>{const r=recNow[m];return `<span class="mchip" style="--c:${recColor(r.pct)}" title="Gotowość ${r.pct}%">${MUSCLE_NAME[m]} ${r.pct}%</span>`}).join('')}</div>`:''}
-        ${loadKind(it.exId)===1?`<div class="lmode" role="group" aria-label="Rodzaj obciążenia"><span class="muted">Masa ciała:</span><button type="button" data-act="lmode" data-i="${idx}" data-v="add" aria-pressed="${!assistMode(it.exId)}">+ obciążenie</button><button type="button" data-act="lmode" data-i="${idx}" data-v="assist" aria-pressed="${assistMode(it.exId)}">− asysta</button></div>`:loadKind(it.exId)===2?`<div class="lmode"><span class="muted">Wpisujesz kg asysty. Im mniej, tym lepiej.</span></div>`:''}
+        ${loadKind(it.exId)===1&&!TIMED.has(it.exId)?`<div class="lmode" role="group" aria-label="Rodzaj obciążenia"><span class="muted">Masa ciała:</span><button type="button" data-act="lmode" data-i="${idx}" data-v="add" aria-pressed="${!assistMode(it.exId)}">+ obciążenie</button><button type="button" data-act="lmode" data-i="${idx}" data-v="assist" aria-pressed="${assistMode(it.exId)}">− asysta</button></div>`:loadKind(it.exId)===2?`<div class="lmode"><span class="muted">Wpisujesz kg asysty. Im mniej, tym lepiej.</span></div>`:''}
         <div class="ex-meta"><span>${esc(e[3]||'')}</span>${vid?`<a href="${esc(vid)}" target="_blank" rel="noopener">Instruktaż ▸</a>`:''}</div>
       </div>
       <button type="button" class="ver v-${it.ver}" data-act="vpick" data-i="${idx}" aria-label="Wersja ${it.ver}, zmień">${it.ver}<small>${it.sets.length} ${it.sets.length===1?'SERIA':it.sets.length<5?'SERIE':'SERII'}</small></button></div>
       ${ui.vpick===idx?`<div class="vpick"><span class="muted">Ustaw wersję:</span>${[...new Set(it.cy)].map(x=>`<button type="button" class="vmini v-${x}" data-act="setVer" data-i="${idx}" data-v="${x}">${x}</button>`).join('')}<button type="button" class="link" data-act="vpick" data-i="${idx}">Anuluj</button></div>`:''}
-      <div class="cyc"><span>Cykl:</span>${cyc}</div>
+      ${it.cy.length>1?`<div class="cyc"><span>Cykl:</span>${cyc}</div>`:''}
       <div class="target">
-        <div><div class="label">Powtórzenia</div><div class="v">${v.reps}</div></div>
+        <div><div class="label">Powtórzenia</div><div class="v">${esc(it.reps?it.sets.length+' × '+it.reps:v.reps)}</div></div>
         <div><div class="label">Ostatnio ${it.ver}</div><div class="v">${last?showKg(it.exId,last.kg)+' × '+(isNaN(last.reps)?'?':last.reps)+rirTxt(last.rir):'—'}</div>${last?`<div class="muted">${dstr(last.date)}${effKg(it.exId,last.kg,last.bw||null)!==null?' · efektywnie '+fmt(effKg(it.exId,last.kg,last.bw||null))+' kg':''}</div>`:''}</div>
-        <div class="goal"><div class="label">Cel dziś</div><div class="v">${goalTxt(it.exId,goal)}</div><div class="muted">${goal!==null&&effKg(it.exId,goal)!==null?'efektywnie '+fmt(effKg(it.exId,Math.min(goal,assistMode(it.exId)?0:goal)))+' kg · ':''}przerwa ${v.rest}</div></div>
+        <div class="goal"><div class="label">Cel dziś</div><div class="v">${byReps?(last?(last.kg&&!(TIMED.has(it.exId))?showKg(it.exId,last.kg)+' × ':'')+(isNaN(last.reps)?'?':(last.reps+1)+'+')+(TIMED.has(it.exId)?' s':''):'pierwszy raz'):goalTxt(it.exId,goal)}</div><div class="muted">${goal!==null&&effKg(it.exId,goal)!==null?'efektywnie '+fmt(effKg(it.exId,Math.min(goal,assistMode(it.exId)?0:goal)))+' kg · ':''}przerwa ${v.rest}</div></div>
       </div>
       ${ui.chart===idx?chartSVG(it.exId,(ui.chartVer||{})[it.exId]||it.ver):''}
       <div class="sets">${it.sets.map((st,si)=>`<div class="set${st.done?' done':''}${(()=>{const k=num(st.kg),pb=bestBefore(it.exId,it.ver);return st.done&&!isNaN(k)&&isFinite(pb)&&k>pb?' pr':''})()}">
@@ -826,7 +871,7 @@ function viewToday(){
           <label class="inp"><input id="kg-${idx}-${si}" inputmode="decimal" autocomplete="off" aria-label="Ciężar seria ${si+1}" data-i="${idx}" data-s="${si}" data-f="kg" data-as="${assistMode(it.exId)?1:0}" value="${esc(kgShown(it.exId,st.kg))}" placeholder="${assistMode(it.exId)?(goal!==null?fmt(Math.max(0,-goal)):'asysta'):(goal!==null?fmt(goal):(e[4]?'0':'kg'))}"><span>${assistMode(it.exId)?'as.':'kg'}</span></label>
           <button type="button" class="stp" data-act="kgStep" data-d="1" data-i="${idx}" data-s="${si}" aria-label="Więcej kg">+</button></div>
         <span class="x">×</span>
-        <label class="inp"><input id="rp-${idx}-${si}" inputmode="numeric" autocomplete="off" aria-label="Powtórzenia seria ${si+1}" data-i="${idx}" data-s="${si}" data-f="reps" value="${esc(st.reps)}" placeholder="pow."><span></span></label>
+        <label class="inp"><input id="rp-${idx}-${si}" inputmode="numeric" autocomplete="off" aria-label="Powtórzenia seria ${si+1}" data-i="${idx}" data-s="${si}" data-f="reps" value="${esc(st.reps)}" placeholder="${TIMED.has(it.exId)?'sek.':'pow.'}"><span></span></label>
         <button type="button" class="tick" data-act="tick" data-i="${idx}" data-s="${si}" aria-pressed="${st.done}" aria-label="Seria ${si+1} zrobiona">✓</button>
       </div>${st.done&&S.settings.rir!==false?`<div class="rir" role="group" aria-label="RIR seria ${si+1}"><span>RIR (zapas):</span>${['0','1','2','3','4'].map(r=>`<button type="button" data-act="rir" data-i="${idx}" data-s="${si}" data-v="${r}" aria-pressed="${String(st.rir)===r}">${r==='4'?'4+':r}</button>`).join('')}</div>`:''}`).join('')}</div>
       <div class="ex-foot"><button type="button" class="link" data-act="swap" data-i="${idx}">Zamienniki (${alts.length}) ${ui.swap===idx?'▴':'▾'}</button><span class="row"><button type="button" class="link" data-act="delSet" data-i="${idx}">– seria</button><button type="button" class="link" data-act="addSet" data-i="${idx}">+ seria</button></span></div>
@@ -845,7 +890,7 @@ function viewHistory(){
   const exIds=[...new Set(SESS.flatMap(s=>s.items.map(i=>i.exId)))];
   html+=`<details${ui.hchart?' open':''}><summary>Postępy ćwiczeń</summary><div style="display:flex;flex-direction:column;gap:14px;margin-top:10px">`;
   for(const id of exIds){
-    const rows=['HD','VC','HC','VD'].map(v=>{
+    const rows=['HD','VC','HC','VD','LP'].map(v=>{
       const ent=SESS.flatMap(s=>s.items.filter(i=>i.exId===id&&i.ver===v).map(i=>({d:s.date,bw:s.bw,kg:Math.max(...i.sets.map(x=>isNaN(x.kg)?-Infinity:x.kg))}))).filter(x=>isFinite(x.kg));
       if(!ent.length) return '';
       const l=ent[ent.length-1], best=Math.max(...ent.map(x=>x.kg));
@@ -889,7 +934,7 @@ function viewEditor(p){
     (p.trainings[t]||[]).forEach((sl,si)=>{
       h+=`<div class="ed-slot"><select id="ed-ex-${ti}-${si}" data-ed="slotEx" data-t="${ti}" data-s="${si}" aria-label="Ćwiczenie">${exOptions(sl.ex)}</select>
         <input id="ed-sets-${ti}-${si}" inputmode="numeric" data-ed="slotSets" data-t="${ti}" data-s="${si}" value="${sl.sets}" aria-label="Serie">
-        <div class="row"><span class="muted" style="font-size:12px">Cykl:</span><select id="ed-cy-${ti}-${si}" data-ed="slotCy" data-t="${ti}" data-s="${si}">${CYCLES.map(c=>`<option value="${c.join(' ')}"${c.join(' ')===sl.cy.join(' ')?' selected':''}>${c.join(' › ')}</option>`).join('')}</select>
+        <div class="row"><span class="muted" style="font-size:12px">Cykl:</span><select id="ed-cy-${ti}-${si}" data-ed="slotCy" data-t="${ti}" data-s="${si}">${CYCLES.map(c=>`<option value="${c.join(' ')}"${c.join(' ')===sl.cy.join(' ')?' selected':''}>${c[0]==='LP'?'LP – progresja liniowa':c.join(' › ')}</option>`).join('')}</select>
         <button type="button" class="sbtn" data-act="edMove" data-t="${ti}" data-s="${si}" data-d="-1" aria-label="W górę">↑</button><button type="button" class="sbtn" data-act="edMove" data-t="${ti}" data-s="${si}" data-d="1" aria-label="W dół">↓</button><button type="button" class="sbtn" data-act="edDelSlot" data-t="${ti}" data-s="${si}" aria-label="Usuń ćwiczenie">✕</button></div></div>`;
     });
     h+=`<div><button type="button" class="sbtn" data-act="edAddSlot" data-t="${ti}">+ ćwiczenie</button></div></div>`;
@@ -1071,14 +1116,14 @@ document.addEventListener('click',e=>{
     case 'vpick': ui.vpick=ui.vpick===i?null:i; break;
     case 'setVer': {const it=DRAFT.items[i], v=el.dataset.v, n=S.cycles[it.key]||0, L=it.cy.length, idx=it.cy.indexOf(v);
       S.cycles[it.key]=n-(n%L)+idx; it.ver=v; ui.vpick=null; persist(); draftSave(); toast(`${exName(it.exId)}: wersja ${v}`); break}
-    case 'kgStep': {const it=DRAFT.items[i], st=it.sets[+el.dataset.s], inc=Number(S.settings.inc||1.25);
+    case 'kgStep': {const it=DRAFT.items[i], st=it.sets[+el.dataset.s], inc=itemInc(it)||Number(S.settings.inc||1.25);
       const as=assistMode(it.exId);
-      let base=num(st.kg); if(isNaN(base)){const g=goalFor(it.exId,it.ver); if(g!==null){st.kg=as&&g>0?'0':fmt(g);draftSave();break} base=0}
+      let base=num(st.kg); if(isNaN(base)){const g=goalFor(it.exId,it.ver,itemInc(it)); if(g!==null){st.kg=as&&g>0?'0':fmt(g);draftSave();break} base=0}
       if(as){const nv=Math.max(0,Math.abs(base)+inc*(+el.dataset.d)); st.kg=nv?fmt(-nv):'0'} // stepper works on the shown assistance
       else st.kg=fmt(Math.max(0,base+inc*(+el.dataset.d)));
       draftSave(); break}
     case 'tick': {const it=DRAFT.items[i], st=it.sets[+el.dataset.s];
-      if(!st.done){ if(st.kg===''){const g=goalFor(it.exId,it.ver); if(g!==null) st.kg=(assistMode(it.exId)&&g>0)?'0':fmt(g); else if(loadKind(it.exId)) st.kg='0'} st.done=true; startTimer(it.ver); keepAwake();
+      if(!st.done){ if(st.kg===''){const g=goalFor(it.exId,it.ver,itemInc(it)); if(g!==null) st.kg=(assistMode(it.exId)&&g>0)?'0':fmt(g); else if(loadKind(it.exId)) st.kg='0'} st.done=true; startTimer(it.ver); keepAwake();
         if(!DRAFT.startedAt&&!DRAFT.hinted){DRAFT.hinted=1;toast('Licznik treningu stoi. Włącz go przyciskiem Rozpocznij.')} }
       else st.done=false;
       draftSave(); break}
