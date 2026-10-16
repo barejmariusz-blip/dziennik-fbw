@@ -750,6 +750,12 @@ lpPlan('kalmin','Kalistenika – minimalne wyposażenie','Full body bez sprzętu
 lpPlan('kalupp','Kalistenika – górna część','Push/Pull górna. 2-3 dni. Progresja: więcej reps, warianty trudniejsze, obciążenie.',{Push:[['pushup',4,'8-15',0],['diamondpu',3,'6-12',0],['pikepu',3,'8-12',0],['dips',3,'6-12',0]],Pull:[['pull',4,'5-12',0],['invrow',3,'10-15',0],['negpu',3,'3-5',0]]},[['Push',0,'Pull',0,'Push',0,'Pull',0]]);
 lpPlan('kalbody','Kalistenika – całe ciało','Full body, 3 dni. Push, Pull, Legs z masą ciała. Progresja wariantami.',{Day1:[['pushup',3,'8-15',0],['pull',3,'5-10',0],['bwsquat',3,'15-20',0],['crunch',3,'12-20',0]],Day2:[['dips',3,'6-12',0],['invrow',3,'8-15',0],['lunge',3,'12',0],['plank',3,'30-60 s',0]],Day3:[['diamondpu',3,'6-12',0],['chin',3,'5-10',0],['pistol',3,'6-10',0],['glutebr',3,'15',0]]},[['Day1',0,'Day2','Day3',0,0,0]]);
 lpPlan('kaliso','Kalistenika – isometria','Trenowanie statyczne. Handstand, planche, front lever, l-sit. 3-4 dni, niż objętość.',{Handstand:[['hswall',4,'20-40 s',0],['pikepu',3,'8-12',0]],Lever:[['tuckfl',4,'10-15 s',0],['pull',3,'5-8',0]],Planche:[['pllean',3,'15-30 s',0],['pppu',3,'8',0]],Core:[['lsit',4,'10-20 s',0],['plank',3,'30-60 s',0]]},[['Handstand','Lever',0,'Planche','Core',0,0]]);
+/* Mobilność — rozciąganie i joga */
+lpPlan('strq','Stretching – Quick','Post-treningowe. 5-10 min. Szybkie rozciąganie głównych grup mięśni.',{Post:[['crunch',2,'10-15',0],['lunge',2,'20 s',0],['hamc',2,'20 s',0],['chest',2,'20 s',0]]},[['Post',0,'Post',0,'Post',0,'Post',0,'Post',0,'Post',0,'Post',0]]);
+lpPlan('strf','Stretching – Full Body','Kompleksowe. 20-30 min. Pełne rozciąganie całego ciała.',{Full:[['crunch',3,'20 s',0],['lunge',3,'30 s',0],['squat',2,'30 s',0],['hamc',3,'30 s',0],['chest',3,'30 s',0],['shoulder',2,'30 s',0]]},[['Full',0,'Full',0,'Full',0,0]]);
+lpPlan('strd','Stretching – Deep','Głębokie. 30-45 min. Zaawansowane rozciąganie, PNF, myofascial release.',{Deep:[['crunch',4,'30-45 s',0],['lunge',3,'45 s',0],['squat',3,'45 s',0],['hamc',4,'45 s',0],['chest',3,'45 s',0],['hip',3,'45 s',0]]},[['Deep',0,'Deep',0,'Deep',0,0]]);
+lpPlan('yogab','Joga – Beginners','Podstawy. 20-30 min. Asany początkujące, oddychanie, relaksacja.',{Basic:[['plank',3,'30-60 s',0],['lunge',3,'each',0],['squat',2,'30 s',0],['crunch',2,'20 s',0],['glutebr',2,'15',0]]},[['Basic',0,'Basic',0,'Basic',0,'Basic',0]]);
+lpPlan('yogaf','Joga – Flow','Dynamiczna. 30-45 min. Vinyasa flow, więcej ruchu, cardio element.',{Flow:[['pushup',3,'10-15',0],['lunge',4,'10 per leg',0],['squat',3,'15-20',0],['plank',3,'45-60 s',0],['crunch',3,'20 s',0]]},[['Flow',0,'Flow',0,'Flow',0,0]]);
 const CYCLES=[['LP'],['HD','VC','HC','VD'],['VC','HC','VD','HD'],['HC','VD','HD','VC'],['VD','HD','VC','HC'],['VC','VD'],['VD','VC'],['HD','HC'],['HC','HD'],['HD'],['VC'],['HC'],['VD']];
 const rid=(p)=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
@@ -931,7 +937,7 @@ function cardioCard(c,ci){
   </article>`;
 }
 function vBadge(v){return `<span class="vmini v-${v}">${v}</span>`}
-const PGROUPS=[['Moje plany',x=>!x.builtin],['Balance FBW',x=>/^sz-/.test(x.id)],['Początkujący',x=>['sl5x5','ss','gzclp','nlp','gslp','wsbs','icf'].includes(x.id)],['Zaawansowane',x=>['531','phul','ppl6','ul','gvt','hst','tm','madcow','arnold','dc','hd','a6w'].includes(x.id)],['Kalistenika',x=>['kal1','kal2','kal3','kalmin','kalupp','kalbody','kaliso'].includes(x.id)],['Cardio',x=>x.builtin&&/^c/.test(x.id)]];
+const PGROUPS=[['Moje plany',x=>!x.builtin],['SIŁA',x=>x.builtin&&!/^str|^yoga/.test(x.id)],['Początkujący',x=>['sl5x5','ss','gzclp','nlp','gslp','wsbs','icf'].includes(x.id)],['Zaawansowane',x=>['531','phul','ppl6','ul','gvt','hst','tm','madcow','arnold','dc','hd','a6w'].includes(x.id)],['Kalistenika',x=>['kal1','kal2','kal3','kalmin','kalupp','kalbody','kaliso'].includes(x.id)],['Cardio',x=>x.builtin&&/^c/.test(x.id)],['MOBILNOŚĆ',x=>x.builtin&&/^str|^yoga/.test(x.id)],['Stretching',x=>['strq','strf','strd'].includes(x.id)],['Joga',x=>['yogab','yogaf'].includes(x.id)]];
 function viewOnboarding(){
   const sel=ui.onbPlan||S.activePlan, sp=allPlans().find(x=>x.id===sel)||plan();
   let h=`<section class="onb"><h2>Witaj w dzienniku</h2><p class="muted" style="margin:0">Dwa kroki i możesz trenować. Wszystko zmienisz potem w zakładce Plan.</p>
