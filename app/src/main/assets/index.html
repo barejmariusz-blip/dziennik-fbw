@@ -1,3 +1,8 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dziennik Balance FBW</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -586,33 +591,9 @@ const EXTRA_ROWS=[
  ['revcablecurl','Reverse cable curl','Uginanie przedramion nachwytem na wyciągu','iso','przedramiona:1 biceps:.6'],
  ['ezrevcurl','EZ reverse curl','Uginanie przedramion nachwytem łamaną sztangą','iso','przedramiona:1 biceps:.6'],
  ['ropehammer','Rope hammer curl','Uginanie chwytem młotkowym z liną wyciągu','iso','biceps:.8 przedramiona:.8'],
- ['crosshammer','Cross-body hammer curl','Uginanie młotkowe hantlem w poprzek tułowia','iso','biceps:.8 przedramiona:.7'],
- /* PF 2.0 Ponadprzeciętna Forma 2.0 */
- ['pf_pbk','Push-ups on knees','Pompki na kolanach','hpush','klatka:1 triceps:.6 barki:.4',1],
- ['pf_squat_kh','Squats on chair','Przysiady na krześle','knee','czworoglowe:1 posladki:.7',1],
- ['pf_scap','Scapular plank rot.','Rotacje łopatki w desce','iso','barki:.8 triceps:.5 brzuch:.4',1],
- ['pf_wrist_st','Wrist lean stretch','Rozciąganie przedniego ciała','iso','klatka:.6 barki:.4',0],
- ['pf_pupu_elev','Elevated push-ups','Pompki przy podwyższeniu','hpush','klatka:1 triceps:.6 barki:.4',1],
- ['pf_squat_tempo','Tempo squats','Przysiady z tempem','knee','czworoglowe:1 posladki:.7',1],
- ['pf_gb_pause','Glute bridge pause','Glute bridge z pauzą','hip','posladki:1 dwuglowe:.4',1],
- ['pf_shldtap','Shoulder taps','Klepnięcia w ramię','iso','barki:.6 klatka:.5 triceps:.4',1],
- ['pf_birddog','Bird-dog','Ptak - pies','iso','posladki:.8 brzuch:.7 plecy:.4',1],
- /* PF 2.0 Stage 2+ exercises */
- ['pf_pushup','Push-ups','Pompki klasyczne (z obciążeniem na plecach)','hpush','klatka:1 triceps:.6 barki:.4 brzuch:.2',1],
- ['pf_squat','Bodyweight squat','Przysiad bez obciążenia, pełny zakres','knee','czworoglowe:1 posladki:.7',1],
- ['pf_plank','Plank hold','Deska: podpór na przedramionach (na czas)','iso','brzuch:1',1],
- ['pf_dead_hang','Dead hang','Zwis na drążku na czas','iso','przedramiona:1 plecy:.3',1],
- ['pf_leg_raise','Leg raise','Unoszenie nóg w zwisie','iso','brzuch:1',1],
- ['pf_invrow','Inverted row','Podciąganie australijskie','hpull','plecy:1 biceps:.5 kaptury:.4',1],
- ['pf_diamondpu','Diamond push-ups','Pompki diamentowe','hpush','triceps:1 klatka:.7 barki:.3',1],
- ['pf_squat_pulse','Pulse squats','Przysiady pulsacyjne','knee','czworoglowe:1 posladki:.7',1],
- ['pf_pushup_decline','Decline push-ups','Pompki z nogami wysoko','hpush','barki:1 triceps:.8 klatka:.6',1],
- ['pf_hswall','Handstand hold','Stanie na rękach przy ścianie','iso','barki:1 triceps:.4 kaptury:.3',1],
-
- ['pf_jumpjack','Jumping jacks','Pajacyki','iso','lydki:.8 barki:.3',1],
- ['pf_boxjab','Boxing jab','Bieg bokserski','iso','barki:.6 brzuch:.4',1]
+ ['crosshammer','Cross-body hammer curl','Uginanie młotkowe hantlem w poprzek tułowia','iso','biceps:.8 przedramiona:.7']
 ];
-const TIMED=new Set(['plank','hswall','tuckfl','pllean','lsit','deadhang','pf_scap','pf_wrist_st','pf_squat_tempo','pf_gb_pause']);
+const TIMED=new Set(['plank','hswall','tuckfl','pllean','lsit','deadhang']);
 const MLOW={czworoglowe:'czworogłowe uda',dwuglowe:'dwugłowe uda',posladki:'pośladki',lydki:'łydki'};
 for(const [id,name,pl,pattern,m,bw] of EXTRA_ROWS){
   const mus=pm(m); EX_MUSCLES[id]=mus;
@@ -714,17 +695,7 @@ lpPlan('kal3','Kalistenika – droga do skilli','Pod umiejętności: handstand, 
 const CARDIO_EX=[['c_tread','Bieżnia',7],['c_run','Bieg na zewnątrz',8.5],['c_bike','Rower stacjonarny',6],['c_ellip','Orbitrek',5.5],['c_row','Wioślarz',7],['c_stairs','Stepper / schody',8],['c_rope','Skakanka',10],['c_swim','Pływanie',7],['c_walk','Marsz',4]];
 const C_MET={}; for(const [id,name,met] of CARDIO_EX){EX[id]=[name,'cardio','','',3];C_MET[id]=met}
 const CMODES={HIIT:'HIIT · interwały',LISS:'LISS · stałe tempo',MIX:'MIX · LISS + HIIT'};
-const CDEF={
-HIIT:{rounds:8,work:60,rest:60},
-LISS:{min:20},
-MIX:{lissMin:10,rounds:3,work:60,rest:60},
-HIIT_short:{rounds:6,work:30,rest:30},
-HIIT_long:{rounds:10,work:90,rest:60},
-HIIT_tabata:{rounds:8,work:20,rest:10},
-LISS_long:{min:45},
-LISS_walk:{min:30},
-Fartlek:{min:25}
-};
+const CDEF={HIIT:{rounds:8,work:60,rest:60},LISS:{min:20},MIX:{lissMin:10,rounds:3,work:60,rest:60}};
 function cTotalSec(c){const N=+c.rounds||0,W=+c.work||0,R=+c.rest||0,h=N*(W+R)-(N>0?R:0);return c.mode==='LISS'?(+c.min||0)*60:c.mode==='MIX'?(+c.lissMin||0)*60+h:h}
 function lastCardio(c){for(let i=SESS.length-1;i>=0;i--){const a=(SESS[i].cardio||[]).find(x=>x.key===c.key||(x.exId===c.exId&&x.mode===c.mode));if(a)return Object.assign({date:SESS[i].date},a)}return null}
 // suggestion = plan target moved forward from last time: LISS +2 min, HIIT +1 round, run-walk +work seconds after a full set
@@ -785,12 +756,6 @@ lpPlan('strf','Stretching – Full Body','Kompleksowe. 20-30 min. Pełne rozcią
 lpPlan('strd','Stretching – Deep','Głębokie. 30-45 min. Zaawansowane rozciąganie, PNF, myofascial release.',{Deep:[['crunch',4,'30-45 s',0],['lunge',3,'45 s',0],['squat',3,'45 s',0],['hamc',4,'45 s',0],['chest',3,'45 s',0],['hip',3,'45 s',0]]},[['Deep',0,'Deep',0,'Deep',0,0]]);
 lpPlan('yogab','Joga – Beginners','Podstawy. 20-30 min. Asany początkujące, oddychanie, relaksacja.',{Basic:[['plank',3,'30-60 s',0],['lunge',3,'each',0],['squat',2,'30 s',0],['crunch',2,'20 s',0],['glutebr',2,'15',0]]},[['Basic',0,'Basic',0,'Basic',0,'Basic',0]]);
 lpPlan('yogaf','Joga – Flow','Dynamiczna. 30-45 min. Vinyasa flow, więcej ruchu, cardio element.',{Flow:[['pushup',3,'10-15',0],['lunge',4,'10 per leg',0],['squat',3,'15-20',0],['plank',3,'45-60 s',0],['crunch',3,'20 s',0]]},[['Flow',0,'Flow',0,'Flow',0,0]]);
-/* PF 2.0 Ponadprzeciętna Forma 2.0 – Etap 1 */
-lpPlan('pf20','PF 2.0 – Etap 1','Ponadprzeciętna Forma 2.0 Tomczeski Workout. Etap 1: progresywny program kalisteniki, 3× tygodniu. Rozgrzewka 5/10 min zalecana przed każdym treningiem.',{
-  'Warm-up 5min':[['pf_jumpjack',1,'40s',0],['pf_wrist_st',2,'20s+20s',0],['pf_scap',2,'10',0]],
-  'Warm-up 10min':[['pf_jumpjack',1,'40s',0],['pf_wrist_st',2,'20s+20s',0],['pf_scap',2,'10',0]],
-  'Trening A':[['pf_wrist_st',2,'20s+20s',0],['pf_scap',2,'10',0],['pf_pbk',3,'6-10',0],['bwsquat',3,'10-12',0],['glutebr',3,'10-14',0],['plank',3,'20-30s',0]],
-  'Trening B':[['pf_wrist_st',2,'20s+20s',0],['pf_shldtap',2,'10/side',0],['pf_pupu_elev',3,'8-12',0],['pf_squat_tempo',3,'8-10',0],['pf_gb_pause',3,'12-15',0],['pf_birddog',2,'8/side',0]]},[['Trening A',0,'Trening B',0,'Trening A',0,0],['Trening B',0,'Trening A',0,'Trening B',0,0]]);
 const CYCLES=[['LP'],['HD','VC','HC','VD'],['VC','HC','VD','HD'],['HC','VD','HD','VC'],['VD','HD','VC','HC'],['VC','VD'],['VD','VC'],['HD','HC'],['HC','HD'],['HD'],['VC'],['HC'],['VD']];
 const rid=(p)=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
@@ -868,7 +833,7 @@ function exVideo(id){const e=EXA(id);if(!e)return '';if(!e[2])return 'https://ww
 function allExIds(){return Object.keys(EX).concat(Object.keys(S.customEx||{}))}
 function seq(){const p=plan();return p.schedule?p.schedule.flat().filter(Boolean):(p.order&&p.order.length?p.order:p.trNames)}
 function nextTr(){const s=seq();return s[S.seqPos%s.length]}
-function trainings(){const base=plan().trNames; return [...base,'Wolny dzień']}
+function trainings(){return plan().trNames}
 function swapKey(p,key){return p.builtin&&p.prio?p.prio+':'+key:p.id+'|'+key}
 function slotsFor(tr){
   const p=plan();
@@ -972,7 +937,7 @@ function cardioCard(c,ci){
   </article>`;
 }
 function vBadge(v){return `<span class="vmini v-${v}">${v}</span>`}
-const PGROUPS=[['Moje plany',x=>!x.builtin],['SIŁA',x=>x.builtin&&!/^str|^yoga|^pf/.test(x.id)],['Początkujący',x=>['sl5x5','ss','gzclp','nlp','gslp','wsbs','icf'].includes(x.id)],['Zaawansowane',x=>['531','phul','ppl6','ul','gvt','hst','tm','madcow','arnold','dc','hd','a6w'].includes(x.id)],['Kalistenika',x=>['kal1','kal2','kal3','kalmin','kalupp','kalbody','kaliso','pf20'].includes(x.id)],['Cardio',x=>x.builtin&&/^c/.test(x.id)],['MOBILNOŚĆ',x=>x.builtin&&/^str|^yoga/.test(x.id)],['Stretching',x=>['strq','strf','strd'].includes(x.id)],['Joga',x=>['yogab','yogaf'].includes(x.id)]];
+const PGROUPS=[['Moje plany',x=>!x.builtin],['SIŁA',x=>x.builtin&&!/^str|^yoga/.test(x.id)],['Początkujący',x=>['sl5x5','ss','gzclp','nlp','gslp','wsbs','icf'].includes(x.id)],['Zaawansowane',x=>['531','phul','ppl6','ul','gvt','hst','tm','madcow','arnold','dc','hd','a6w'].includes(x.id)],['Kalistenika',x=>['kal1','kal2','kal3','kalmin','kalupp','kalbody','kaliso'].includes(x.id)],['Cardio',x=>x.builtin&&/^c/.test(x.id)],['MOBILNOŚĆ',x=>x.builtin&&/^str|^yoga/.test(x.id)],['Stretching',x=>['strq','strf','strd'].includes(x.id)],['Joga',x=>['yogab','yogaf'].includes(x.id)]];
 function viewOnboarding(){
   const sel=ui.onbPlan||S.activePlan, sp=allPlans().find(x=>x.id===sel)||plan();
   let h=`<section class="onb"><h2>Witaj w dzienniku</h2><p class="muted" style="margin:0">Dwa kroki i możesz trenować. Wszystko zmienisz potem w zakładce Plan.</p>
@@ -1033,21 +998,6 @@ function viewToday(){
     const ready=rf.length?Math.round(rf.reduce((a,r)=>a+r.pct,0)/rf.length):100;
     html+=`<button type="button" class="ready" data-act="goRecovery">${ring(ready,58,'Gotowość mięśni')}<div><div class="label">Gotowość mięśni na ${esc(tr)}</div><div style="font-size:14px">${rf.slice(0,3).map(r=>`${MUSCLE_NAME[r.m]} <b style="color:${recColor(r.pct)}">${r.pct}%</b>`).join(' · ')||'Wszystko gotowe'}</div></div><span class="muted">›</span></button>`;
   }
-  
-  ${S.settings.fasting && S.settings.fasting!=='off'?(() => {
-    const proto = {['16:8']: 16, ['20:4']: 20, 'omad': 23}[S.settings.fasting] || 16;
-    const start = (S.settings.fastStart || '12:00').split(':').map(Number);
-    const now = new Date();
-    const eatMin = (start[0]*60 + start[1]);
-    const endMin = (eatMin + proto*60) % 1440;
-    const elapsed = (now.getHours()*60 + now.getMinutes());
-    const inEating = elapsed >= eatMin && elapsed < eatMin + proto*60;
-    const h1 = Math.floor(eatMin/60), m1 = eatMin%60, h2 = Math.floor(endMin/60), m2 = endMin%60;
-    return `<div class="ready" style="background:${inEating?'color-mix(in srgb,var(--ok) 15%,var(--surface))':'color-mix(in srgb,var(--muted) 10%,var(--surface))'}">
-      <div><div class="label">Post: ${S.settings.fasting.toUpperCase()}</div>
-      <div style="font-size:14px">${inEating?'🍽 OKNO JEDZENIA':'⏱ POST'} — ${h1.toString().padStart(2,'0')}:${m1.toString().padStart(2,'0')} do ${h2.toString().padStart(2,'0')}:${m2.toString().padStart(2,'0')}</div></div></div>`;
-  })():''}
-
   if(!S.settings.chosen){
     html+=`<div class="notice"><b>Najpierw wybierz plan.</b><span>Teraz pokazuję ${esc(p.name)}. Plany są w zakładce Plan → Biblioteka.</span><div><button type="button" class="btn ghost" data-act="ptab" data-v="plans">Wybierz plan</button></div></div>`;
   }
@@ -1059,9 +1009,6 @@ function viewToday(){
       <div class="row"><button type="button" class="btn danger" data-act="switchYes">Zmień na ${esc(ui.switchTo)}</button><button type="button" class="btn ghost" data-act="switchNo">Zostań przy ${esc(tr)}</button></div></div>`;
   }
   const recNow=SESS.length?Object.fromEntries(recovery().map(r=>[r.m,r])):null;
-  if(DRAFT.tr==='Wolny dzień' && !DRAFT.items.length){
-    html+=`<div class="notice"><b>Dodaj ćwiczenia</b><span>To wolny dzień - dodaj dowolne ćwiczenia, cardio lub kombinację.</span><div class="row"><button type="button" class="btn ghost" data-act="addExFree">+ Ćwiczenie</button><button type="button" class="btn ghost" data-act="cAddAsk">+ Cardio</button></div></div>`;
-  }
   DRAFT.items.forEach((it,idx)=>{
     const e=EXA(it.exId)||['?','iso','','',0], v=VERS[it.ver]||VERS.LP, last=lastFor(it.exId,it.ver), goal=last?last.kg+incFor(it):null, byReps=it.inc===0;
     const cyc=it.cy.map(x=>`<b class="${x===it.ver?'cur':''}">${x}</b>`).join('<span>›</span>');
@@ -1216,9 +1163,6 @@ function viewSettings(){
    html+=`</details>`;}
   html+=`<div><button type="button" class="btn ghost" data-act="planNew">+ Nowy plan</button></div>
     <span class="muted" style="font-size:13px">Pod „⋯” zmienisz nazwę planu albo zrobisz kopię do edycji. Ćwiczeń w szablonach nie da się zmieniać. Kopia robi z szablonu własny plan do edycji, a cykle wersji i ciężary przechodzą razem z nim.</span></div>
-
-  ${S.settings.fasting && S.settings.fasting!=='off'?`<div class="field"><label class="label">Okno jedzenia (start)</label><input type="time" id="fastStart" value="${S.settings.fastStart||'12:00'}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px"></div>`:''}
-  <span class="muted" style="font-size:13px">Wybierz protokół postu i kiedy zaczynasz jeść - apka pokaże Twoje okna post/jadłodajne.</span>
 <!--SEG:set-->  <div class="field"><label class="label" for="bw">Masa ciała (kg)</label><input id="bw" inputmode="decimal" placeholder="np. 82" value="${S.settings.bw?fmt(S.settings.bw):''}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px"><span class="muted" style="font-size:13px">Opcjonalnie. Dla ćwiczeń z masą ciała apka pokaże obciążenie efektywne, np. 82 kg − 20 kg asysty = 62 kg. Każdy trening zapamiętuje masę z dnia, w którym go zapisałeś.</span></div>
   <div class="field"><span class="label">RIR przy seriach</span><div class="seg" role="group"><button type="button" data-act="rirOn" data-v="1" aria-pressed="${S.settings.rir!==false}">Pokazuj</button><button type="button" data-act="rirOn" data-v="0" aria-pressed="${S.settings.rir===false}">Ukryj</button></div><span class="muted" style="font-size:13px">Po odhaczeniu serii możesz dotknąć, ile powtórzeń zostało w zapasie (0 = do upadku). Nieobowiązkowe: bez wyboru nic się nie zapisuje.</span></div>
   <div class="field"><label class="label" for="inc">Minimalny przyrost ciężaru (kg)</label><input id="inc" inputmode="decimal" value="${fmt(S.settings.inc)}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px"></div>
@@ -1555,3 +1499,8 @@ applyLook();
 render();
 initCloud();
 </script>
+</head>
+<body>
+
+</body>
+</html>
