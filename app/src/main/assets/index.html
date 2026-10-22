@@ -1038,15 +1038,17 @@ function viewToday(){
     const proto = {['16:8']: 16, ['20:4']: 20, 'omad': 23}[S.settings.fasting] || 16;
     const start = (S.settings.fastStart || '12:00').split(':').map(Number);
     const now = new Date();
-    const eating = (start[0]*60 + start[1]);
-    const fasting = 24*60 - proto*60;
+    const eatMin = (start[0]*60 + start[1]);
+    const endMin = (eatMin + proto*60) % 1440;
     const elapsed = (now.getHours()*60 + now.getMinutes());
-    const inEating = elapsed >= eating && elapsed < eating + proto*60;
+    const inEating = elapsed >= eatMin && elapsed < eatMin + proto*60;
+    const h1 = Math.floor(eatMin/60), m1 = eatMin%60, h2 = Math.floor(endMin/60), m2 = endMin%60;
     return `<div class="ready" style="background:${inEating?'color-mix(in srgb,var(--ok) 15%,var(--surface))':'color-mix(in srgb,var(--muted) 10%,var(--surface))'}">
       <div><div class="label">Post: ${S.settings.fasting.toUpperCase()}</div>
-      <div style="font-size:14px">${inEating?'🍽 OKNO JEDZENIA':'⏱ POST'} — ${eating.toString().padStart(2,'0')}:${(eating%60).toString().padStart(2,'0')} do ${((eating+proto*60)%1440).toString().padStart(2,'0')}:${(((eating+proto*60)*60)%60).toString().padStart(2,'0')}</div></div></div>`;
+      <div style="font-size:14px">${inEating?'🍽 OKNO JEDZENIA':'⏱ POST'} — ${h1.toString().padStart(2,'0')}:${m1.toString().padStart(2,'0')} do ${h2.toString().padStart(2,'0')}:${m2.toString().padStart(2,'0')}</div></div></div>`;
   })():''}
-if(!S.settings.chosen){
+
+  if(!S.settings.chosen){
     html+=`<div class="notice"><b>Najpierw wybierz plan.</b><span>Teraz pokazuję ${esc(p.name)}. Plany są w zakładce Plan → Biblioteka.</span><div><button type="button" class="btn ghost" data-act="ptab" data-v="plans">Wybierz plan</button></div></div>`;
   }
   if(SESS.length&&cloudState!=='cloud'&&(!S.lastBackup||Date.now()-S.lastBackup>7*864e5)){
