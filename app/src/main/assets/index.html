@@ -803,7 +803,7 @@ let tab='today', ui={};
 try{const raw=localStorage.getItem(LS); if(raw){const o=JSON.parse(raw); if(o.S) S=Object.assign(S,o.S); if(Array.isArray(o.SESS)) SESS=o.SESS;}}catch(e){}
 try{const raw=localStorage.getItem(LSD); if(raw) DRAFT=JSON.parse(raw);}catch(e){}
 function normalize(){
-  S.settings=Object.assign({inc:1.25,look:'classic',mode:'auto',fasting:'off',fastStart:'12:00'},S.settings||{});
+  S.settings=Object.assign({inc:1.25,look:'classic',mode:'auto'},S.settings||{});
   S.plans=S.plans||[]; S.planNames=S.planNames||{}; S.repPick=S.repPick||{}; S.customEx=S.customEx||{}; S.loadMode=S.loadMode||{}; S.cycles=S.cycles||{}; S.swaps=S.swaps||{};
   if(!S.activePlan||!allPlans().find(p=>p.id===S.activePlan)) S.activePlan='sz-'+(S.settings.days||3)+'-'+(S.settings.prio||1);
 }
@@ -1217,8 +1217,6 @@ function viewSettings(){
   html+=`<div><button type="button" class="btn ghost" data-act="planNew">+ Nowy plan</button></div>
     <span class="muted" style="font-size:13px">Pod „⋯” zmienisz nazwę planu albo zrobisz kopię do edycji. Ćwiczeń w szablonach nie da się zmieniać. Kopia robi z szablonu własny plan do edycji, a cykle wersji i ciężary przechodzą razem z nim.</span></div>
 
-  <div class="field"><span class="label">Post przerywany (IF)</span>
-    <div class="seg" role="group">${[['off','Brak'],['16:8','16:8 (8h feeding)'],['20:4','20:4 (4h feeding)'],['omad','OMAD (1 meal)'],['5:2','5:2 (2 days)'],['custom','Custom']].map(([k,l])=>`<button type="button" data-act="fasting" data-v="${k}" aria-pressed="${S.settings.fasting===k}">${l}</button>`).join('')}</div></div>
   ${S.settings.fasting && S.settings.fasting!=='off'?`<div class="field"><label class="label">Okno jedzenia (start)</label><input type="time" id="fastStart" value="${S.settings.fastStart||'12:00'}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px"></div>`:''}
   <span class="muted" style="font-size:13px">Wybierz protokół postu i kiedy zaczynasz jeść - apka pokaże Twoje okna post/jadłodajne.</span>
 <!--SEG:set-->  <div class="field"><label class="label" for="bw">Masa ciała (kg)</label><input id="bw" inputmode="decimal" placeholder="np. 82" value="${S.settings.bw?fmt(S.settings.bw):''}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px"><span class="muted" style="font-size:13px">Opcjonalnie. Dla ćwiczeń z masą ciała apka pokaże obciążenie efektywne, np. 82 kg − 20 kg asysty = 62 kg. Każdy trening zapamiętuje masę z dnia, w którym go zapisałeś.</span></div>
