@@ -1033,7 +1033,20 @@ function viewToday(){
     const ready=rf.length?Math.round(rf.reduce((a,r)=>a+r.pct,0)/rf.length):100;
     html+=`<button type="button" class="ready" data-act="goRecovery">${ring(ready,58,'Gotowość mięśni')}<div><div class="label">Gotowość mięśni na ${esc(tr)}</div><div style="font-size:14px">${rf.slice(0,3).map(r=>`${MUSCLE_NAME[r.m]} <b style="color:${recColor(r.pct)}">${r.pct}%</b>`).join(' · ')||'Wszystko gotowe'}</div></div><span class="muted">›</span></button>`;
   }
-  if(!S.settings.chosen){
+  
+  ${S.settings.fasting && S.settings.fasting!=='off'?(() => {
+    const proto = {['16:8']: 16, ['20:4']: 20, 'omad': 23}[S.settings.fasting] || 16;
+    const start = (S.settings.fastStart || '12:00').split(':').map(Number);
+    const now = new Date();
+    const eating = (start[0]*60 + start[1]);
+    const fasting = 24*60 - proto*60;
+    const elapsed = (now.getHours()*60 + now.getMinutes());
+    const inEating = elapsed >= eating && elapsed < eating + proto*60;
+    return `<div class="ready" style="background:${inEating?'color-mix(in srgb,var(--ok) 15%,var(--surface))':'color-mix(in srgb,var(--muted) 10%,var(--surface))'}">
+      <div><div class="label">Post: ${S.settings.fasting.toUpperCase()}</div>
+      <div style="font-size:14px">${inEating?'🍽 OKNO JEDZENIA':'⏱ POST'} — ${eating.toString().padStart(2,'0')}:${(eating%60).toString().padStart(2,'0')} do ${((eating+proto*60)%1440).toString().padStart(2,'0')}:${(((eating+proto*60)*60)%60).toString().padStart(2,'0')}</div></div></div>`;
+  })():''}
+if(!S.settings.chosen){
     html+=`<div class="notice"><b>Najpierw wybierz plan.</b><span>Teraz pokazuję ${esc(p.name)}. Plany są w zakładce Plan → Biblioteka.</span><div><button type="button" class="btn ghost" data-act="ptab" data-v="plans">Wybierz plan</button></div></div>`;
   }
   if(SESS.length&&cloudState!=='cloud'&&(!S.lastBackup||Date.now()-S.lastBackup>7*864e5)){
@@ -1201,6 +1214,11 @@ function viewSettings(){
    html+=`</details>`;}
   html+=`<div><button type="button" class="btn ghost" data-act="planNew">+ Nowy plan</button></div>
     <span class="muted" style="font-size:13px">Pod „⋯” zmienisz nazwę planu albo zrobisz kopię do edycji. Ćwiczeń w szablonach nie da się zmieniać. Kopia robi z szablonu własny plan do edycji, a cykle wersji i ciężary przechodzą razem z nim.</span></div>
+
+  <div class="field"><span class="label">Post przerywany (IF)</span>
+    <div class="seg" role="group">${[['off','Brak'],['16:8','16:8 (8h feeding)'],['20:4','20:4 (4h feeding)'],['omad','OMAD (1 meal)'],['5:2','5:2 (2 days)'],['custom','Custom']].map(([k,l])=>`<button type="button" data-act="fasting" data-v="${k}" aria-pressed="${S.settings.fasting===k}">${l}</button>`).join('')}</div></div>
+  ${S.settings.fasting && S.settings.fasting!=='off'?`<div class="field"><label class="label">Okno jedzenia (start)</label><input type="time" id="fastStart" value="${S.settings.fastStart||'12:00'}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px"></div>`:''}
+  <span class="muted" style="font-size:13px">Wybierz protokół postu i kiedy zaczynasz jeść - apka pokaże Twoje okna post/jadłodajne.</span>
 <!--SEG:set-->  <div class="field"><label class="label" for="bw">Masa ciała (kg)</label><input id="bw" inputmode="decimal" placeholder="np. 82" value="${S.settings.bw?fmt(S.settings.bw):''}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px"><span class="muted" style="font-size:13px">Opcjonalnie. Dla ćwiczeń z masą ciała apka pokaże obciążenie efektywne, np. 82 kg − 20 kg asysty = 62 kg. Każdy trening zapamiętuje masę z dnia, w którym go zapisałeś.</span></div>
   <div class="field"><span class="label">RIR przy seriach</span><div class="seg" role="group"><button type="button" data-act="rirOn" data-v="1" aria-pressed="${S.settings.rir!==false}">Pokazuj</button><button type="button" data-act="rirOn" data-v="0" aria-pressed="${S.settings.rir===false}">Ukryj</button></div><span class="muted" style="font-size:13px">Po odhaczeniu serii możesz dotknąć, ile powtórzeń zostało w zapasie (0 = do upadku). Nieobowiązkowe: bez wyboru nic się nie zapisuje.</span></div>
   <div class="field"><label class="label" for="inc">Minimalny przyrost ciężaru (kg)</label><input id="inc" inputmode="decimal" value="${fmt(S.settings.inc)}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px"></div>
