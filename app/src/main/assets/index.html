@@ -803,7 +803,7 @@ let tab='today', ui={};
 try{const raw=localStorage.getItem(LS); if(raw){const o=JSON.parse(raw); if(o.S) S=Object.assign(S,o.S); if(Array.isArray(o.SESS)) SESS=o.SESS;}}catch(e){}
 try{const raw=localStorage.getItem(LSD); if(raw) DRAFT=JSON.parse(raw);}catch(e){}
 function normalize(){
-  S.settings=Object.assign({inc:1.25,look:'classic',mode:'auto'},S.settings||{});
+  S.settings=Object.assign({inc:1.25,look:'classic',mode:'auto',fasting:'off',fastStart:'12:00'},S.settings||{});
   S.plans=S.plans||[]; S.planNames=S.planNames||{}; S.repPick=S.repPick||{}; S.customEx=S.customEx||{}; S.loadMode=S.loadMode||{}; S.cycles=S.cycles||{}; S.swaps=S.swaps||{};
   if(!S.activePlan||!allPlans().find(p=>p.id===S.activePlan)) S.activePlan='sz-'+(S.settings.days||3)+'-'+(S.settings.prio||1);
 }
