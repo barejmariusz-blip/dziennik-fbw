@@ -715,7 +715,8 @@ function cSuggest(slot){
 function cDesc(c){const p=[];if(c.mode!=='LISS'&&c.rounds)p.push((c.mode==='MIX'?(c.lissMin||0)+' min + ':'')+(c.roundsDone!==undefined&&c.roundsDone!==''?c.roundsDone:c.rounds)+'× '+fmtClock((+c.work||0)*1000)+'/'+fmtClock((+c.rest||0)*1000));if(+c.tmin)p.push(fmt(+c.tmin)+' min');if(+c.km)p.push(fmt(+c.km)+' km');if(+c.hr)p.push(c.hr+' bpm');return exName(c.exId)+' · '+c.mode+(p.length?' · '+p.join(' · '):'')}
 // calorie estimates (MET × kg × h); user-entered kcal always wins
 function bwOr(s){return Number((s&&s.bw)||S.settings.bw||0)||80}
-function cardioKcal(c,bw){if(+c.kcal>0)return Math.round(+c.kcal);const m=+c.tmin||0;if(!m)return 0;const f=c.mode==='HIIT'?1.35:c.mode==='MIX'?1.15:1;return Math.round((C_MET[c.exId]||6)*f*bw*m/60)}
+function rpeMet(rpe){const r=+rpe||0;return r<=0?0:Math.min(r*1.1+1,12)}
+function cardioKcal(c,bw){if(+c.kcal>0)return Math.round(+c.kcal);const m=+c.tmin||0;if(!m)return 0;let met;if(+c.rpe>0){met=rpeMet(c.rpe)}else{const f=c.mode==='HIIT'?1.35:c.mode==='MIX'?1.15:1;met=(C_MET[c.exId]||6)*f}return Math.round(met*bw*m/60)}
 function strengthKcal(s){if(!s.items.length)return 0;const sets=s.items.reduce((a,it)=>a+Math.max(it.sets.length,3),0),cmin=(s.cardio||[]).reduce((a,c)=>a+(+c.tmin||0),0);
   const est=(sets||s.items.length*3)*2.5, byDur=s.dur?s.dur/60000-cmin:0, min=byDur>=(sets||1)*1.5?byDur:est;return Math.round(5*bwOr(s)*min/60)}
 function sessKcal(s){const bw=bwOr(s);return strengthKcal(s)+(s.cardio||[]).reduce((a,c)=>a+cardioKcal(c,bw),0)}
@@ -932,7 +933,8 @@ function cardioCard(c,ci){
     <div class="cfg">${cfg}<span class="muted">= ${fmtClock(tot*1000)}</span></div>
     ${l?`<div class="muted" style="font-size:12px">Ostatnio ${dstr(l.date)}: ${esc(cDesc(l))}</div>`:''}
     <button type="button" class="btn${run?' ghost':''}" data-act="cStart" data-c="${ci}"${run?' disabled':''}>${run?'Minutnik działa…':'▶ Start minutnika'}</button>
-    <div class="cres">${cr('tmin','min','czas')}${cr('km','km','dystans')}${cr('hr','tętno','śr.','numeric')}${cr('kcal','kcal','~'+est,'numeric')}</div>
+    <div class="cres">${cr('tmin','min','czas')}${cr('km','km','dystans')}${cr('hr','tętno','śr.','numeric')}${cr('rpe','RPE','1-10','numeric')}${cr('kcal','kcal','~'+est,'numeric')}</div>
+    <details style="font-size:12px;margin-top:8px"><summary style="cursor:pointer;color:var(--muted)">Skala RPE</summary><div style="margin-top:6px;line-height:1.5">1–2: bardzo łatwe · 3–4: łatwe · 5–6: umiarkowane · 7–8: trudne · 9–10: maksymalny wysiłek</div></details>
     <button type="button" class="tick" data-act="cDone" data-c="${ci}" aria-pressed="${c.done}">✓ ${c.done?'Zrobione':'Oznacz jako zrobione'}</button>
   </article>`;
 }
@@ -1247,10 +1249,10 @@ async function exportJson(){
 }
 async function exportCsv(){
   const q2=v=>{v=String(v);return /[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
-  const rows=[['Data','Trening','Plan','Ćwiczenie','Wersja','Seria','Ciężar kg (ujemny = asysta)','Powtórzenia','RIR','Masa ciała kg','Czas treningu min','Cardio min','Dystans km','Tętno śr.','kcal (szac.)']];
+  const rows=[['Data','Trening','Plan','Ćwiczenie','Wersja','Seria','Ciężar kg (ujemny = asysta)','Powtórzenia','RIR','Masa ciała kg','Czas treningu min','Cardio min','Dystans km','Tętno śr.','RPE (1-10)','kcal (szac.)']];
   for(const s of SESS){const d=new Date(s.date).toLocaleDateString('pl-PL'), pn=(allPlans().find(p=>p.id===s.plan)||{}).name||(s.days?s.days+' dni P'+s.prio:'');
-    for(const it of s.items) it.sets.forEach((x,i)=>rows.push([d,s.tr,pn,exName(it.exId),it.ver,i+1,isNaN(x.kg)?'':fmt(x.kg),isNaN(x.reps)?'':x.reps,x.rir==null?'':x.rir,s.bw?fmt(s.bw):'',s.dur?Math.round(s.dur/60000):'','','','','']));
-    for(const c of (s.cardio||[])) rows.push([d,s.tr,pn,exName(c.exId),c.mode,'','','','',s.bw?fmt(s.bw):'',s.dur?Math.round(s.dur/60000):'',c.tmin==null?'':fmt(c.tmin),c.km==null?'':fmt(c.km),c.hr==null?'':c.hr,cardioKcal(c,bwOr(s))]);}
+    for(const it of s.items) it.sets.forEach((x,i)=>rows.push([d,s.tr,pn,exName(it.exId),it.ver,i+1,isNaN(x.kg)?'':fmt(x.kg),isNaN(x.reps)?'':x.reps,x.rir==null?'':x.rir,s.bw?fmt(s.bw):'',s.dur?Math.round(s.dur/60000):'','','','','','']));
+    for(const c of (s.cardio||[])) rows.push([d,s.tr,pn,exName(c.exId),c.mode,'','','','',s.bw?fmt(s.bw):'',s.dur?Math.round(s.dur/60000):'',c.tmin==null?'':fmt(c.tmin),c.km==null?'':fmt(c.km),c.hr==null?'':c.hr,c.rpe==null?'':c.rpe,cardioKcal(c,bwOr(s))]);}
   const r=await saveFile('dziennik-fbw-'+stamp()+'.csv','﻿'+rows.map(r=>r.map(q2).join(';')).join('\r\n'),'text/csv');
   if(r==='ok') toast('Plik CSV zapisany w Pobranych'); else if(r==='fail') toast('Nie udało się zapisać pliku');
 }
@@ -1282,7 +1284,7 @@ function finish(){
   const p=plan();
   const sess={id:rid('s'),date:when,tr:DRAFT.tr,plan:p.id,days:p.days,prio:p.prio,seqStep:step,items};
   const cardio=(DRAFT.cardio||[]).filter(c=>c.done||c.tmin!==''||c.km!=='').map(c=>{const o={key:c.key,exId:c.exId,mode:c.mode};
-    for(const f of ['rounds','work','rest','min','lissMin','tmin','km','hr','kcal','roundsDone']){const v=num(c[f]);if(!isNaN(v))o[f]=v}
+    for(const f of ['rounds','work','rest','min','lissMin','tmin','km','hr','rpe','kcal','roundsDone']){const v=num(c[f]);if(!isNaN(v))o[f]=v}
     if(!o.tmin) o.tmin=Math.round(cTotalSec(c)/60); return o});
   if(cardio.length) sess.cardio=cardio;
   if(CT) cEnd(false,true);
@@ -1350,7 +1352,7 @@ document.addEventListener('click',e=>{
     case 'cAddNo': ui.cAdd=false; break;
     case 'cAdd': {const last=[...SESS].reverse().flatMap(x=>x.cardio||[])[0]; DRAFT.cardio.push(cSuggest({key:'extra:'+el.dataset.v,exId:last?last.exId:'c_tread',mode:el.dataset.v,extra:true})); ui.cAdd=false; draftSave(); break}
     case 'cDel': {const ci=+el.dataset.c; if(CT&&CT.ci===ci){clearInterval(ctInt);CT=null;$('#ctimer').hidden=true;document.body.classList.remove('ct')} DRAFT.cardio.splice(ci,1); draftSave(); break}
-    case 'cMode': {const ci=+el.dataset.c, c=DRAFT.cardio[ci]; if(CT&&CT.ci===ci) return; const n=cSuggest({key:c.key,exId:c.exId,mode:el.dataset.v,extra:c.extra}); DRAFT.cardio[ci]=Object.assign(n,{tmin:c.tmin,km:c.km,hr:c.hr,kcal:c.kcal}); draftSave(); break}
+    case 'cMode': {const ci=+el.dataset.c, c=DRAFT.cardio[ci]; if(CT&&CT.ci===ci) return; const n=cSuggest({key:c.key,exId:c.exId,mode:el.dataset.v,extra:c.extra}); DRAFT.cardio[ci]=Object.assign(n,{tmin:c.tmin,km:c.km,hr:c.hr,rpe:c.rpe,kcal:c.kcal}); draftSave(); break}
     case 'cDone': {const c=DRAFT.cardio[+el.dataset.c]; c.done=!c.done; draftSave(); break}
     case 'cStart': if(CT) {toast('Minutnik już działa');return} cStart(+el.dataset.c); return;
     case 'ctPause': if(CT){CT.paused=!CT.paused;CT.last=Date.now();cTick()} return;
