@@ -1,3 +1,8 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dziennik Balance FBW</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -298,6 +303,8 @@ body.ct{padding-bottom:calc(270px + env(safe-area-inset-bottom,0px))}
 .onb ol{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px;font-size:13px}
 .legend{font-size:12px;display:flex;flex-direction:column;gap:4px;background:var(--surface2);border-radius:8px;padding:8px 10px}
 .legend div{display:grid;grid-template-columns:40px minmax(0,1fr);gap:6px;align-items:baseline}
+.vname{font-size:12px;color:var(--muted);white-space:nowrap}
+.legend .vmini{font-size:13px;justify-self:start}
 .infob{background:none;border:0;padding:0 2px;color:var(--accent);font-weight:700;font-size:13px}
 nav.tabs button{display:flex;flex-direction:column;align-items:center;gap:2px}
 nav.tabs svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -344,6 +351,12 @@ const REP_OPTS={HD:['0-1 (max)','1-3','1-5'],HC:['1-3','3-6'],VC:['6-8','8-10'],
 const REP_DEF={HD:'1-3',HC:'1-3',VC:'6-8',VD:'8-10'};
 // average and top of all regular ranges of a version (the "0-1 (max)" attempt is left out)
 function repStats(ver){const n=(REP_OPTS[ver]||[]).filter(r=>!/max/.test(r)).flatMap(r=>r.split('-').map(Number));if(!n.length)return null;const lo=Math.min(...n),hi=Math.max(...n);return {avg:Math.round((lo+hi)/2),max:hi}}
+// full names + legend for the version codes, shown wherever the codes appear
+const VNAME={HD:'najciężej',HC:'ciężko',VC:'średnio',VD:'lżej',LP:'progresja liniowa'};
+const VDESC={HD:'najciężej, mało powtórzeń (1-5), przerwa 2–3 min',HC:'ciężko, 1-6 powtórzeń, przerwa 2–3 min',VC:'średnio, 6-10 powtórzeń, przerwa 1–2 min',VD:'lżej, więcej powtórzeń (6-20), przerwa 1 min',LP:'progresja liniowa: stałe powtórzenia, ciężar rośnie co trening'};
+function legendBox(vs,note){vs=(vs||['HD','HC','VC','VD']).filter(v=>VDESC[v]);return `<div class="legend">${vs.map(v=>`<div><b class="vmini v-${v}">${v}</b><span>${VDESC[v]}</span></div>`).join('')}${note?`<span class="muted">${note}</span>`:''}</div>`}
+function legendBtn(k){return `<button type="button" class="infob" data-act="lgd" data-k="${k}" aria-expanded="${!!(ui.lgd||{})[k]}">ⓘ Legenda</button>`}
+function legendFor(k,vs,note){return (ui.lgd||{})[k]?legendBox(vs,note):''}
 const repLabel=r=>/max/.test(r)?'próba max (0-1)':r;
 const PAT={cardio:'Cardio',vpush:'Pchnięcie w pionie',vpull:'Ściąganie w pionie',hpush:'Pchnięcie w poziomie',hpull:'Ściąganie w poziomie',knee:'Zgięcie kolana',hip:'Zgięcie biodra',iso:'Izolacja'};
 // id: [name, pattern, youtube id, focus, bodyweight]
@@ -586,33 +599,9 @@ const EXTRA_ROWS=[
  ['revcablecurl','Reverse cable curl','Uginanie przedramion nachwytem na wyciągu','iso','przedramiona:1 biceps:.6'],
  ['ezrevcurl','EZ reverse curl','Uginanie przedramion nachwytem łamaną sztangą','iso','przedramiona:1 biceps:.6'],
  ['ropehammer','Rope hammer curl','Uginanie chwytem młotkowym z liną wyciągu','iso','biceps:.8 przedramiona:.8'],
- ['crosshammer','Cross-body hammer curl','Uginanie młotkowe hantlem w poprzek tułowia','iso','biceps:.8 przedramiona:.7'],
- /* PF 2.0 Ponadprzeciętna Forma 2.0 */
- ['pf_pbk','Push-ups on knees','Pompki na kolanach','hpush','klatka:1 triceps:.6 barki:.4',1],
- ['pf_squat_kh','Squats on chair','Przysiady na krześle','knee','czworoglowe:1 posladki:.7',1],
- ['pf_scap','Scapular plank rot.','Rotacje łopatki w desce','iso','barki:.8 triceps:.5 brzuch:.4',1],
- ['pf_wrist_st','Wrist lean stretch','Rozciąganie przedniego ciała','iso','klatka:.6 barki:.4',0],
- ['pf_pupu_elev','Elevated push-ups','Pompki przy podwyższeniu','hpush','klatka:1 triceps:.6 barki:.4',1],
- ['pf_squat_tempo','Tempo squats','Przysiady z tempem','knee','czworoglowe:1 posladki:.7',1],
- ['pf_gb_pause','Glute bridge pause','Glute bridge z pauzą','hip','posladki:1 dwuglowe:.4',1],
- ['pf_shldtap','Shoulder taps','Klepnięcia w ramię','iso','barki:.6 klatka:.5 triceps:.4',1],
- ['pf_birddog','Bird-dog','Ptak - pies','iso','posladki:.8 brzuch:.7 plecy:.4',1],
- /* PF 2.0 Stage 2+ exercises */
- ['pf_pushup','Push-ups','Pompki klasyczne (z obciążeniem na plecach)','hpush','klatka:1 triceps:.6 barki:.4 brzuch:.2',1],
- ['pf_squat','Bodyweight squat','Przysiad bez obciążenia, pełny zakres','knee','czworoglowe:1 posladki:.7',1],
- ['pf_plank','Plank hold','Deska: podpór na przedramionach (na czas)','iso','brzuch:1',1],
- ['pf_dead_hang','Dead hang','Zwis na drążku na czas','iso','przedramiona:1 plecy:.3',1],
- ['pf_leg_raise','Leg raise','Unoszenie nóg w zwisie','iso','brzuch:1',1],
- ['pf_invrow','Inverted row','Podciąganie australijskie','hpull','plecy:1 biceps:.5 kaptury:.4',1],
- ['pf_diamondpu','Diamond push-ups','Pompki diamentowe','hpush','triceps:1 klatka:.7 barki:.3',1],
- ['pf_squat_pulse','Pulse squats','Przysiady pulsacyjne','knee','czworoglowe:1 posladki:.7',1],
- ['pf_pushup_decline','Decline push-ups','Pompki z nogami wysoko','hpush','barki:1 triceps:.8 klatka:.6',1],
- ['pf_hswall','Handstand hold','Stanie na rękach przy ścianie','iso','barki:1 triceps:.4 kaptury:.3',1],
-
- ['pf_jumpjack','Jumping jacks','Pajacyki','iso','lydki:.8 barki:.3',1],
- ['pf_boxjab','Boxing jab','Bieg bokserski','iso','barki:.6 brzuch:.4',1]
+ ['crosshammer','Cross-body hammer curl','Uginanie młotkowe hantlem w poprzek tułowia','iso','biceps:.8 przedramiona:.7']
 ];
-const TIMED=new Set(['plank','hswall','tuckfl','pllean','lsit','deadhang','pf_scap','pf_wrist_st','pf_squat_tempo','pf_gb_pause']);
+const TIMED=new Set(['plank','hswall','tuckfl','pllean','lsit','deadhang']);
 const MLOW={czworoglowe:'czworogłowe uda',dwuglowe:'dwugłowe uda',posladki:'pośladki',lydki:'łydki'};
 for(const [id,name,pl,pattern,m,bw] of EXTRA_ROWS){
   const mus=pm(m); EX_MUSCLES[id]=mus;
@@ -714,17 +703,7 @@ lpPlan('kal3','Kalistenika – droga do skilli','Pod umiejętności: handstand, 
 const CARDIO_EX=[['c_tread','Bieżnia',7],['c_run','Bieg na zewnątrz',8.5],['c_bike','Rower stacjonarny',6],['c_ellip','Orbitrek',5.5],['c_row','Wioślarz',7],['c_stairs','Stepper / schody',8],['c_rope','Skakanka',10],['c_swim','Pływanie',7],['c_walk','Marsz',4]];
 const C_MET={}; for(const [id,name,met] of CARDIO_EX){EX[id]=[name,'cardio','','',3];C_MET[id]=met}
 const CMODES={HIIT:'HIIT · interwały',LISS:'LISS · stałe tempo',MIX:'MIX · LISS + HIIT'};
-const CDEF={
-HIIT:{rounds:8,work:60,rest:60},
-LISS:{min:20},
-MIX:{lissMin:10,rounds:3,work:60,rest:60},
-HIIT_short:{rounds:6,work:30,rest:30},
-HIIT_long:{rounds:10,work:90,rest:60},
-HIIT_tabata:{rounds:8,work:20,rest:10},
-LISS_long:{min:45},
-LISS_walk:{min:30},
-Fartlek:{min:25}
-};
+const CDEF={HIIT:{rounds:8,work:60,rest:60},LISS:{min:20},MIX:{lissMin:10,rounds:3,work:60,rest:60}};
 function cTotalSec(c){const N=+c.rounds||0,W=+c.work||0,R=+c.rest||0,h=N*(W+R)-(N>0?R:0);return c.mode==='LISS'?(+c.min||0)*60:c.mode==='MIX'?(+c.lissMin||0)*60+h:h}
 function lastCardio(c){for(let i=SESS.length-1;i>=0;i--){const a=(SESS[i].cardio||[]).find(x=>x.key===c.key||(x.exId===c.exId&&x.mode===c.mode));if(a)return Object.assign({date:SESS[i].date},a)}return null}
 // suggestion = plan target moved forward from last time: LISS +2 min, HIIT +1 round, run-walk +work seconds after a full set
@@ -744,8 +723,7 @@ function cSuggest(slot){
 function cDesc(c){const p=[];if(c.mode!=='LISS'&&c.rounds)p.push((c.mode==='MIX'?(c.lissMin||0)+' min + ':'')+(c.roundsDone!==undefined&&c.roundsDone!==''?c.roundsDone:c.rounds)+'× '+fmtClock((+c.work||0)*1000)+'/'+fmtClock((+c.rest||0)*1000));if(+c.tmin)p.push(fmt(+c.tmin)+' min');if(+c.km)p.push(fmt(+c.km)+' km');if(+c.hr)p.push(c.hr+' bpm');return exName(c.exId)+' · '+c.mode+(p.length?' · '+p.join(' · '):'')}
 // calorie estimates (MET × kg × h); user-entered kcal always wins
 function bwOr(s){return Number((s&&s.bw)||S.settings.bw||0)||80}
-function rpeMet(rpe){const r=+rpe||0; return r<=0?0:Math.min(r*1.1+1,12)}
-function cardioKcal(c,bw){if(+c.kcal>0)return Math.round(+c.kcal);const m=+c.tmin||0;if(!m)return 0;let met;if(+c.rpe>0){met=rpeMet(c.rpe)}else{const f=c.mode==='HIIT'?1.35:c.mode==='MIX'?1.15:1;met=(C_MET[c.exId]||6)*f}return Math.round(met*bw*m/60)}
+function cardioKcal(c,bw){if(+c.kcal>0)return Math.round(+c.kcal);const m=+c.tmin||0;if(!m)return 0;const f=c.mode==='HIIT'?1.35:c.mode==='MIX'?1.15:1;return Math.round((C_MET[c.exId]||6)*f*bw*m/60)}
 function strengthKcal(s){if(!s.items.length)return 0;const sets=s.items.reduce((a,it)=>a+Math.max(it.sets.length,3),0),cmin=(s.cardio||[]).reduce((a,c)=>a+(+c.tmin||0),0);
   const est=(sets||s.items.length*3)*2.5, byDur=s.dur?s.dur/60000-cmin:0, min=byDur>=(sets||1)*1.5?byDur:est;return Math.round(5*bwOr(s)*min/60)}
 function sessKcal(s){const bw=bwOr(s);return strengthKcal(s)+(s.cardio||[]).reduce((a,c)=>a+cardioKcal(c,bw),0)}
@@ -786,12 +764,6 @@ lpPlan('strf','Stretching – Full Body','Kompleksowe. 20-30 min. Pełne rozcią
 lpPlan('strd','Stretching – Deep','Głębokie. 30-45 min. Zaawansowane rozciąganie, PNF, myofascial release.',{Deep:[['crunch',4,'30-45 s',0],['lunge',3,'45 s',0],['squat',3,'45 s',0],['hamc',4,'45 s',0],['chest',3,'45 s',0],['hip',3,'45 s',0]]},[['Deep',0,'Deep',0,'Deep',0,0]]);
 lpPlan('yogab','Joga – Beginners','Podstawy. 20-30 min. Asany początkujące, oddychanie, relaksacja.',{Basic:[['plank',3,'30-60 s',0],['lunge',3,'each',0],['squat',2,'30 s',0],['crunch',2,'20 s',0],['glutebr',2,'15',0]]},[['Basic',0,'Basic',0,'Basic',0,'Basic',0]]);
 lpPlan('yogaf','Joga – Flow','Dynamiczna. 30-45 min. Vinyasa flow, więcej ruchu, cardio element.',{Flow:[['pushup',3,'10-15',0],['lunge',4,'10 per leg',0],['squat',3,'15-20',0],['plank',3,'45-60 s',0],['crunch',3,'20 s',0]]},[['Flow',0,'Flow',0,'Flow',0,0]]);
-/* PF 2.0 Ponadprzeciętna Forma 2.0 – Etap 1 */
-lpPlan('pf20','PF 2.0 – Etap 1','Ponadprzeciętna Forma 2.0 Tomczeski Workout. Etap 1: progresywny program kalisteniki, 3× tygodniu. Rozgrzewka 5/10 min zalecana przed każdym treningiem.',{
-  'Warm-up 5min':[['pf_jumpjack',1,'40s',0],['pf_wrist_st',2,'20s+20s',0],['pf_scap',2,'10',0]],
-  'Warm-up 10min':[['pf_jumpjack',1,'40s',0],['pf_wrist_st',2,'20s+20s',0],['pf_scap',2,'10',0]],
-  'Trening A':[['pf_wrist_st',2,'20s+20s',0],['pf_scap',2,'10',0],['pf_pbk',3,'6-10',0],['bwsquat',3,'10-12',0],['glutebr',3,'10-14',0],['plank',3,'20-30s',0]],
-  'Trening B':[['pf_wrist_st',2,'20s+20s',0],['pf_shldtap',2,'10/side',0],['pf_pupu_elev',3,'8-12',0],['pf_squat_tempo',3,'8-10',0],['pf_gb_pause',3,'12-15',0],['pf_birddog',2,'8/side',0]]},[['Trening A',0,'Trening B',0,'Trening A',0,0],['Trening B',0,'Trening A',0,'Trening B',0,0]]);
 const CYCLES=[['LP'],['HD','VC','HC','VD'],['VC','HC','VD','HD'],['HC','VD','HD','VC'],['VD','HD','VC','HC'],['VC','VD'],['VD','VC'],['HD','HC'],['HC','HD'],['HD'],['VC'],['HC'],['VD']];
 const rid=(p)=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
@@ -869,7 +841,7 @@ function exVideo(id){const e=EXA(id);if(!e)return '';if(!e[2])return 'https://ww
 function allExIds(){return Object.keys(EX).concat(Object.keys(S.customEx||{}))}
 function seq(){const p=plan();return p.schedule?p.schedule.flat().filter(Boolean):(p.order&&p.order.length?p.order:p.trNames)}
 function nextTr(){const s=seq();return s[S.seqPos%s.length]}
-function trainings(){const base=plan().trNames; return [...base,'Wolny dzień']}
+function trainings(){return plan().trNames}
 function swapKey(p,key){return p.builtin&&p.prio?p.prio+':'+key:p.id+'|'+key}
 function slotsFor(tr){
   const p=plan();
@@ -948,7 +920,7 @@ function chartSVG(exId,sel){
     if(on) g+=a.map((p,i)=>`<circle cx="${X(p.t).toFixed(1)}" cy="${Y(p.kg).toFixed(1)}" r="${i===a.length-1?4.5:3}" style="fill:${i===a.length-1?c:'var(--surface)'};stroke:${c}" stroke-width="2"/>`).join('');
   }
   const a=series[sel], first=a[0].kg, last=a[a.length-1].kg, d=last-first;
-  return `<div class="chart"><div class="lg">${have.map(v=>`<button type="button" class="vmini v-${v}" data-act="chartVer" data-ex="${exId}" data-v="${v}" aria-pressed="${v===sel}">${v} · ${series[v].length}×</button>`).join('')}</div>
+  return `<div class="chart"><div class="lg">${have.map(v=>`<button type="button" class="vmini v-${v}" data-act="chartVer" data-ex="${exId}" data-v="${v}" aria-pressed="${v===sel}" title="${VNAME[v]||''}">${v} ${VNAME[v]||''} · ${series[v].length}×</button>`).join('')}</div>
     <svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ciężar w czasie, wersja ${sel}">${g}</svg>
     <span class="muted" style="font-size:12px">${sel}: ${a.length===1?'jeden trening, '+showKg(exId,last):showKg(exId,first)+' → '+showKg(exId,last)+' ('+(d>=0?'+':'−')+fmt(Math.abs(d))+' kg)'}</span></div>`;
 }
@@ -968,15 +940,12 @@ function cardioCard(c,ci){
     <div class="cfg">${cfg}<span class="muted">= ${fmtClock(tot*1000)}</span></div>
     ${l?`<div class="muted" style="font-size:12px">Ostatnio ${dstr(l.date)}: ${esc(cDesc(l))}</div>`:''}
     <button type="button" class="btn${run?' ghost':''}" data-act="cStart" data-c="${ci}"${run?' disabled':''}>${run?'Minutnik działa…':'▶ Start minutnika'}</button>
-    <div class="cres">${cr('tmin','min','czas')}${cr('km','km','dystans')}${cr('hr','tętno','śr.','numeric')}${cr('rpe','RPE','1-10','numeric')}${cr('kcal','kcal','~'+est,'numeric')}</div>
-    <details style="font-size:12px;margin-top:8px"><summary style="cursor:pointer;color:var(--muted)">Skala RPE</summary>
-      <div style="margin-top:6px;line-height:1.5">1–2: bardzo łatwe · 3–4: łatwe · 5–6: umiarkowane · 7–8: trudne · 9–10: maksymalny wysiłek</div>
-    </details>
+    <div class="cres">${cr('tmin','min','czas')}${cr('km','km','dystans')}${cr('hr','tętno','śr.','numeric')}${cr('kcal','kcal','~'+est,'numeric')}</div>
     <button type="button" class="tick" data-act="cDone" data-c="${ci}" aria-pressed="${c.done}">✓ ${c.done?'Zrobione':'Oznacz jako zrobione'}</button>
   </article>`;
 }
-function vBadge(v){return `<span class="vmini v-${v}">${v}</span>`}
-const PGROUPS=[['Moje plany',x=>!x.builtin],['SIŁA',x=>x.builtin&&!/^str|^yoga|^pf/.test(x.id)],['Początkujący',x=>['sl5x5','ss','gzclp','nlp','gslp','wsbs','icf'].includes(x.id)],['Zaawansowane',x=>['531','phul','ppl6','ul','gvt','hst','tm','madcow','arnold','dc','hd','a6w'].includes(x.id)],['Kalistenika',x=>['kal1','kal2','kal3','kalmin','kalupp','kalbody','kaliso','pf20'].includes(x.id)],['Cardio',x=>x.builtin&&/^c/.test(x.id)],['MOBILNOŚĆ',x=>x.builtin&&/^str|^yoga/.test(x.id)],['Stretching',x=>['strq','strf','strd'].includes(x.id)],['Joga',x=>['yogab','yogaf'].includes(x.id)]];
+function vBadge(v,full){return `<span class="vmini v-${v}" title="${v}: ${VNAME[v]||''}">${v}</span>${full&&VNAME[v]?` <span class="vname">${VNAME[v]}</span>`:''}`}
+const PGROUPS=[['Moje plany',x=>!x.builtin],['SIŁA',x=>x.builtin&&!/^str|^yoga/.test(x.id)],['Początkujący',x=>['sl5x5','ss','gzclp','nlp','gslp','wsbs','icf'].includes(x.id)],['Zaawansowane',x=>['531','phul','ppl6','ul','gvt','hst','tm','madcow','arnold','dc','hd','a6w'].includes(x.id)],['Kalistenika',x=>['kal1','kal2','kal3','kalmin','kalupp','kalbody','kaliso'].includes(x.id)],['Cardio',x=>x.builtin&&/^c/.test(x.id)],['MOBILNOŚĆ',x=>x.builtin&&/^str|^yoga/.test(x.id)],['Stretching',x=>['strq','strf','strd'].includes(x.id)],['Joga',x=>['yogab','yogaf'].includes(x.id)]];
 function viewOnboarding(){
   const sel=ui.onbPlan||S.activePlan, sp=allPlans().find(x=>x.id===sel)||plan();
   let h=`<section class="onb"><h2>Witaj w dzienniku</h2><p class="muted" style="margin:0">Dwa kroki i możesz trenować. Wszystko zmienisz potem w zakładce Plan.</p>
@@ -1037,21 +1006,6 @@ function viewToday(){
     const ready=rf.length?Math.round(rf.reduce((a,r)=>a+r.pct,0)/rf.length):100;
     html+=`<button type="button" class="ready" data-act="goRecovery">${ring(ready,58,'Gotowość mięśni')}<div><div class="label">Gotowość mięśni na ${esc(tr)}</div><div style="font-size:14px">${rf.slice(0,3).map(r=>`${MUSCLE_NAME[r.m]} <b style="color:${recColor(r.pct)}">${r.pct}%</b>`).join(' · ')||'Wszystko gotowe'}</div></div><span class="muted">›</span></button>`;
   }
-  
-  ${S.settings.fasting && S.settings.fasting!=='off'?(() => {
-    const proto = {['16:8']: 16, ['20:4']: 20, 'omad': 23}[S.settings.fasting] || 16;
-    const start = (S.settings.fastStart || '12:00').split(':').map(Number);
-    const now = new Date();
-    const eatMin = (start[0]*60 + start[1]);
-    const endMin = (eatMin + proto*60) % 1440;
-    const elapsed = (now.getHours()*60 + now.getMinutes());
-    const inEating = elapsed >= eatMin && elapsed < eatMin + proto*60;
-    const h1 = Math.floor(eatMin/60), m1 = eatMin%60, h2 = Math.floor(endMin/60), m2 = endMin%60;
-    return `<div class="ready" style="background:${inEating?'color-mix(in srgb,var(--ok) 15%,var(--surface))':'color-mix(in srgb,var(--muted) 10%,var(--surface))'}">
-      <div><div class="label">Post: ${S.settings.fasting.toUpperCase()}</div>
-      <div style="font-size:14px">${inEating?'🍽 OKNO JEDZENIA':'⏱ POST'} — ${h1.toString().padStart(2,'0')}:${m1.toString().padStart(2,'0')} do ${h2.toString().padStart(2,'0')}:${m2.toString().padStart(2,'0')}</div></div></div>`;
-  })():''}
-
   if(!S.settings.chosen){
     html+=`<div class="notice"><b>Najpierw wybierz plan.</b><span>Teraz pokazuję ${esc(p.name)}. Plany są w zakładce Plan → Biblioteka.</span><div><button type="button" class="btn ghost" data-act="ptab" data-v="plans">Wybierz plan</button></div></div>`;
   }
@@ -1063,9 +1017,6 @@ function viewToday(){
       <div class="row"><button type="button" class="btn danger" data-act="switchYes">Zmień na ${esc(ui.switchTo)}</button><button type="button" class="btn ghost" data-act="switchNo">Zostań przy ${esc(tr)}</button></div></div>`;
   }
   const recNow=SESS.length?Object.fromEntries(recovery().map(r=>[r.m,r])):null;
-  if(DRAFT.tr==='Wolny dzień' && !DRAFT.items.length){
-    html+=`<div class="notice"><b>Dodaj ćwiczenia</b><span>To wolny dzień - dodaj dowolne ćwiczenia, cardio lub kombinację.</span><div class="row"><button type="button" class="btn ghost" data-act="addExFree">+ Ćwiczenie</button><button type="button" class="btn ghost" data-act="cAddAsk">+ Cardio</button></div></div>`;
-  }
   DRAFT.items.forEach((it,idx)=>{
     const e=EXA(it.exId)||['?','iso','','',0], v=VERS[it.ver]||VERS.LP, last=lastFor(it.exId,it.ver), goal=last?last.kg+incFor(it):null, byReps=it.inc===0;
     const cyc=it.cy.map(x=>`<b class="${x===it.ver?'cur':''}">${x}</b>`).join('<span>›</span>');
@@ -1080,10 +1031,10 @@ function viewToday(){
         ${loadKind(it.exId)===1&&!TIMED.has(it.exId)?`<div class="lmode" role="group" aria-label="Rodzaj obciążenia"><span class="muted">Masa ciała:</span><button type="button" data-act="lmode" data-i="${idx}" data-v="add" aria-pressed="${!assistMode(it.exId)}">+ obciążenie</button><button type="button" data-act="lmode" data-i="${idx}" data-v="assist" aria-pressed="${assistMode(it.exId)}">− asysta</button></div>`:loadKind(it.exId)===2?`<div class="lmode"><span class="muted">Wpisujesz kg asysty. Im mniej, tym lepiej.</span></div>`:''}
         <div class="ex-meta"><span>${esc(e[3]||'')}</span>${vid?`<a href="${esc(vid)}" target="_blank" rel="noopener">Instruktaż ▸</a>`:''}</div>
       </div>
-      <button type="button" class="ver v-${it.ver}" data-act="vpick" data-i="${idx}" aria-label="Wersja ${it.ver}, zmień">${it.ver}<small>${it.sets.length} ${it.sets.length===1?'SERIA':it.sets.length<5?'SERIE':'SERII'}</small></button></div>
-      ${ui.vpick===idx?`<div class="vpick"><span class="muted">Ustaw wersję:</span>${[...new Set(it.cy)].map(x=>`<button type="button" class="vmini v-${x}" data-act="setVer" data-i="${idx}" data-v="${x}">${x}</button>`).join('')}<button type="button" class="link" data-act="vpick" data-i="${idx}">Anuluj</button></div>`:''}
+      <button type="button" class="ver v-${it.ver}" data-act="vpick" data-i="${idx}" aria-label="Wersja ${it.ver} (${VNAME[it.ver]||''}), zmień">${it.ver}<small>${VNAME[it.ver]||''}</small><small>${it.sets.length} ${it.sets.length===1?'SERIA':it.sets.length<5?'SERIE':'SERII'}</small></button></div>
+      ${ui.vpick===idx?`<div class="vpick"><span class="muted">Ustaw wersję:</span>${[...new Set(it.cy)].map(x=>`<button type="button" class="vmini v-${x}" data-act="setVer" data-i="${idx}" data-v="${x}">${x} · ${VNAME[x]||''}</button>`).join('')}<button type="button" class="link" data-act="vpick" data-i="${idx}">Anuluj</button></div>`:''}
       ${it.cy.length>1?`<div class="cyc"><span>Cykl:</span>${cyc}<button type="button" class="infob" data-act="legend" data-i="${idx}" aria-label="Co znaczą wersje">ⓘ</button></div>`:''}
-      ${ui.legend===idx?`<div class="legend"><div><b>HD</b><span>najciężej, mało powtórzeń (1-5), przerwa 2–3 min</span></div><div><b>HC</b><span>ciężko, 1-6 powtórzeń, przerwa 2–3 min</span></div><div><b>VC</b><span>średnio, 6-10 powtórzeń, przerwa 1–2 min</span></div><div><b>VD</b><span>lżej, więcej powtórzeń (6-20), przerwa 1 min</span></div><span class="muted">Co trening ćwiczenie przechodzi na kolejną wersję. Ciężar rośnie zgodnie z ustawieniem „Dodawaj ciężar co … treningów”.</span></div>`:''}
+      ${ui.legend===idx?legendBox([...new Set(it.cy)],'Co trening ćwiczenie przechodzi na kolejną wersję. Ciężar rośnie zgodnie z ustawieniem „Dodawaj ciężar co … treningów”.'):''}
       <div class="target">
         <div>${!it.reps&&REP_OPTS[it.ver]?`<button type="button" class="rbtn" data-act="rpick" data-i="${idx}" aria-expanded="${ui.rpick===idx}"><div class="label">Powtórzenia ▾</div><div class="v">${(()=>{const r=repRange(it),st=repStats(it.ver),top=/max/.test(r)?null:Number(r.split('-').pop());return esc(repLabel(r))+(st&&top!==null&&top<st.max?` <span class="muted">(max ${st.max})</span>`:'')})()}</div></button>`:`<div class="label">Powtórzenia</div><div class="v">${esc(repRange(it))}</div>`}</div>
         <div><div class="label">Ostatnio ${it.ver}</div><div class="v">${last?showKg(it.exId,last.kg)+' × '+(isNaN(last.reps)?'?':last.reps)+rirTxt(last.rir):'—'}</div>${last?`<div class="muted">${dstr(last.date)}${effKg(it.exId,last.kg,last.bw||null)!==null?' · efektywnie '+fmt(effKg(it.exId,last.kg,last.bw||null))+' kg':''}</div>`:''}</div>
@@ -1115,6 +1066,7 @@ function viewHistory(){
   if(!SESS.length) return `<h2>Historia</h2><div class="empty">Brak zapisanych treningów.<br>Zakończ pierwszy trening, a pojawi się tutaj razem z wersjami i ciężarami.</div>`;
   let html=`<h2>Historia</h2><div class="seg" role="group"><button type="button" data-act="hview" data-v="list" aria-pressed="${ui.hview!=='rec'}">Treningi</button><button type="button" data-act="hview" data-v="rec" aria-pressed="${ui.hview==='rec'}">Regeneracja</button></div>`;
   if(ui.hview==='rec') return html+viewRecovery();
+  html+=`<div class="row" style="justify-content:flex-end">${legendBtn('hist')}</div>${legendFor('hist',['HD','HC','VC','VD','LP'])}`;
   const exIds=[...new Set(SESS.flatMap(s=>s.items.map(i=>i.exId)))];
   html+=`<details${ui.hchart?' open':''}><summary>Postępy ćwiczeń</summary><div style="display:flex;flex-direction:column;gap:14px;margin-top:10px">`;
   for(const id of exIds){
@@ -1122,7 +1074,7 @@ function viewHistory(){
       const ent=SESS.flatMap(s=>s.items.filter(i=>i.exId===id&&i.ver===v).map(i=>({d:s.date,bw:s.bw,kg:Math.max(...i.sets.map(x=>isNaN(x.kg)?-Infinity:x.kg))}))).filter(x=>isFinite(x.kg));
       if(!ent.length) return '';
       const l=ent[ent.length-1], best=Math.max(...ent.map(x=>x.kg));
-      return `<tr><td>${vBadge(v)}</td><td>${showKg(id,l.kg)}${effKg(id,l.kg,l.bw||null)!==null?` <span class="muted">(${fmt(effKg(id,l.kg,l.bw||null))})</span>`:''}</td><td>${showKg(id,best)}</td><td>${ent.length}</td><td>${dstr(l.d)}</td></tr>`;
+      return `<tr><td>${vBadge(v,true)}</td><td>${showKg(id,l.kg)}${effKg(id,l.kg,l.bw||null)!==null?` <span class="muted">(${fmt(effKg(id,l.kg,l.bw||null))})</span>`:''}</td><td>${showKg(id,best)}</td><td>${ent.length}</td><td>${dstr(l.d)}</td></tr>`;
     }).join('');
     if(rows) html+=`<div><button type="button" class="ex-name" data-act="hchart" data-ex="${id}">${esc(exName(id))}</button>${ui.hchart===id?chartSVG(id,(ui.chartVer||{})[id]||'HD'):''}<div class="tbl"><table><thead><tr><th>Wersja</th><th>Ostatnio</th><th>Rekord</th><th>Razy</th><th>Data</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   }
@@ -1160,7 +1112,8 @@ function planPreview(x){
   let rot='';
   if(x.schedule){rot=x.schedule.map((w,wi)=>(x.schedule.length>1?`Tydz. ${wi+1}: `:'')+w.map((t,i)=>t?dn[i]+' '+esc(t):'').filter(Boolean).join(', ')).join('<br>')}
   else rot='Rotacja: '+(x.order||x.trNames).map(esc).join(' → ');
-  return `<div class="pprev">${x.note?`<p>${esc(x.note)}</p>`:''}<div class="muted" style="font-size:12px">${rot}</div>
+  const pk='pp'+(x.id||''), hasCy=x.trNames.some(t=>(x.trainings[t]||[]).some(sl=>!sl.cardio&&!sl.reps));
+  return `<div class="pprev">${x.note?`<p>${esc(x.note)}</p>`:''}<div class="muted" style="font-size:12px">${rot}</div>${hasCy?legendBtn(pk)+legendFor(pk):''}
     ${x.trNames.map(t=>`<div><div class="label">Trening ${esc(t)}</div><ul>${(x.trainings[t]||[]).map(slotLine).join('')||'<li class="muted">brak ćwiczeń</li>'}</ul></div>`).join('')}</div>`;
 }
 function exOptions(sel){
@@ -1168,7 +1121,7 @@ function exOptions(sel){
   return Object.keys(PAT).filter(g=>groups[g]).map(g=>`<optgroup label="${PAT[g]}">${groups[g].map(k=>`<option value="${k}"${k===sel?' selected':''}>${esc(exName(k))}</option>`).join('')}</optgroup>`).join('');
 }
 function viewEditor(p){
-  let h=`<div class="ed"><div class="row" style="justify-content:space-between"><b>Edycja planu</b><button type="button" class="sbtn acc" data-act="edDone">Gotowe</button></div>
+  let h=`<div class="ed"><div class="row" style="justify-content:space-between"><b>Edycja planu</b>${legendBtn('ed')}<button type="button" class="sbtn acc" data-act="edDone">Gotowe</button></div>${legendFor('ed',['HD','HC','VC','VD','LP'])}
     <label class="field"><span class="label">Nazwa planu</span><input type="text" id="ed-name" data-ed="name" value="${esc(p.name)}"></label>`;
   p.trNames.forEach((t,ti)=>{
     h+=`<div class="ed-tr"><div class="row"><span class="label">Trening</span><input type="text" id="ed-tr-${ti}" data-ed="trName" data-t="${ti}" value="${esc(t)}" style="width:90px"><button type="button" class="link" data-act="edDelTr" data-t="${ti}">Usuń trening</button></div>`;
@@ -1220,20 +1173,17 @@ function viewSettings(){
    html+=`</details>`;}
   html+=`<div><button type="button" class="btn ghost" data-act="planNew">+ Nowy plan</button></div>
     <span class="muted" style="font-size:13px">Pod „⋯” zmienisz nazwę planu albo zrobisz kopię do edycji. Ćwiczeń w szablonach nie da się zmieniać. Kopia robi z szablonu własny plan do edycji, a cykle wersji i ciężary przechodzą razem z nim.</span></div>
-
-  ${S.settings.fasting && S.settings.fasting!=='off'?`<div class="field"><label class="label">Okno jedzenia (start)</label><input type="time" id="fastStart" value="${S.settings.fastStart||'12:00'}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px"></div>`:''}
-  <span class="muted" style="font-size:13px">Wybierz protokół postu i kiedy zaczynasz jeść - apka pokaże Twoje okna post/jadłodajne.</span>
 <!--SEG:set-->  <div class="field"><label class="label" for="bw">Masa ciała (kg)</label><input id="bw" inputmode="decimal" placeholder="np. 82" value="${S.settings.bw?fmt(S.settings.bw):''}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px"><span class="muted" style="font-size:13px">Opcjonalnie. Dla ćwiczeń z masą ciała apka pokaże obciążenie efektywne, np. 82 kg − 20 kg asysty = 62 kg. Każdy trening zapamiętuje masę z dnia, w którym go zapisałeś.</span></div>
   <div class="field"><span class="label">RIR przy seriach</span><div class="seg" role="group"><button type="button" data-act="rirOn" data-v="1" aria-pressed="${S.settings.rir!==false}">Pokazuj</button><button type="button" data-act="rirOn" data-v="0" aria-pressed="${S.settings.rir===false}">Ukryj</button></div><span class="muted" style="font-size:13px">Po odhaczeniu serii możesz dotknąć, ile powtórzeń zostało w zapasie (0 = do upadku). Nieobowiązkowe: bez wyboru nic się nie zapisuje.</span></div>
   <div class="field"><label class="label" for="inc">Minimalny przyrost ciężaru (kg)</label><input id="inc" inputmode="decimal" value="${fmt(S.settings.inc)}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px"></div>
   <div class="field"><label class="label" for="every">Dodawaj ciężar co … treningów</label><div class="row"><input id="every" inputmode="numeric" value="${everyN()}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;width:80px;font-size:16px"><span class="muted">treningów z danym ćwiczeniem</span></div><span class="muted" style="font-size:13px">Przy 4: ćwiczenia z cyklem HD›VC›HC›VD dostają przyrost przy każdym powrocie do wersji, a izolacje VC›VD co drugi raz. Przy 1: przyrost za każdym razem, czyli dosłownie jak w PDF i jak w StrongLifts. Przy 0: bez żadnego przyrostu. Działa dla wszystkich planów.</span></div>
-  <div class="field"><span class="label">Stan cykli</span><div class="tbl"><table><thead><tr><th>Tr.</th><th>Ćwiczenie</th><th>Teraz</th><th>Potem</th></tr></thead><tbody>`;
+  <div class="field"><div class="row" style="justify-content:space-between"><span class="label">Stan cykli</span>${legendBtn('cyc')}</div>${legendFor('cyc',['HD','HC','VC','VD','LP'])}<div class="tbl"><table><thead><tr><th>Tr.</th><th>Ćwiczenie</th><th>Teraz</th><th>Potem</th></tr></thead><tbody>`;
   const seen=new Set();
   for(const t of p.trNames){
     for(const sl of slotsFor(t)){
       if(sl.cardio||seen.has(sl.key)) continue; seen.add(sl.key);
       const n=S.cycles[sl.key]||0, cur=sl.cy[n%sl.cy.length];
-      html+=`<tr><td>${esc(t)}</td><td>${esc(exName(sl.exId))}<div class="muted" style="font-size:12px">${esc(exPL(sl.exId))}</div></td><td><select id="cv-${esc(sl.key)}" data-act="cycSel" data-key="${esc(sl.key)}" data-cy="${sl.cy.join(' ')}" aria-label="Wersja na następny trening">${[...new Set(sl.cy)].map(v=>`<option value="${v}"${v===cur?' selected':''}>${v}</option>`).join('')}</select></td><td>${vBadge(sl.cy[(n+1)%sl.cy.length])}</td></tr>`;
+      html+=`<tr><td>${esc(t)}</td><td>${esc(exName(sl.exId))}<div class="muted" style="font-size:12px">${esc(exPL(sl.exId))}</div></td><td><select id="cv-${esc(sl.key)}" data-act="cycSel" data-key="${esc(sl.key)}" data-cy="${sl.cy.join(' ')}" aria-label="Wersja na następny trening">${[...new Set(sl.cy)].map(v=>`<option value="${v}"${v===cur?' selected':''}>${v} – ${VNAME[v]||''}</option>`).join('')}</select></td><td>${vBadge(sl.cy[(n+1)%sl.cy.length],true)}</td></tr>`;
     }
   }
   html+=`</tbody></table></div><span class="muted" style="font-size:13px">Jesteś już w trakcie programu? Ustaw tutaj wersję, którą zrobisz przy następnym treningu z danym ćwiczeniem. Kolejne wersje policzą się same.</span></div>
@@ -1275,7 +1225,7 @@ function tick(){
   const s=Math.floor((Date.now()-T.start)/1000), el=$('#tT');
   el.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
   el.className='t'+(s>=T.max+30?' over':s>=T.min?' ready':'');
-  $('#tInfo').textContent=`Przerwa ${T.ver}: ${VERS[T.ver].rest}`+(s>=T.min?' · możesz zaczynać':'');
+  $('#tInfo').textContent=`Przerwa ${T.ver} (${VNAME[T.ver]||''}): ${VERS[T.ver].rest}`+(s>=T.min?' · możesz zaczynać':'');
   $('#tBar').style.width=Math.min(100,s/T.max*100)+'%';
   if(s>=T.min&&!T.b1){T.b1=true;beep(880)}
   if(s>=T.max&&!T.b2&&T.max>T.min){T.b2=true;beep(660)}
@@ -1307,10 +1257,10 @@ async function exportJson(){
 }
 async function exportCsv(){
   const q2=v=>{v=String(v);return /[;"\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
-  const rows=[['Data','Trening','Plan','Ćwiczenie','Wersja','Seria','Ciężar kg (ujemny = asysta)','Powtórzenia','RIR','Masa ciała kg','Czas treningu min','Cardio min','Dystans km','Tętno śr.','RPE (1-10)','kcal (szac.)']];
+  const rows=[['Data','Trening','Plan','Ćwiczenie','Wersja','Seria','Ciężar kg (ujemny = asysta)','Powtórzenia','RIR','Masa ciała kg','Czas treningu min','Cardio min','Dystans km','Tętno śr.','kcal (szac.)']];
   for(const s of SESS){const d=new Date(s.date).toLocaleDateString('pl-PL'), pn=(allPlans().find(p=>p.id===s.plan)||{}).name||(s.days?s.days+' dni P'+s.prio:'');
-    for(const it of s.items) it.sets.forEach((x,i)=>rows.push([d,s.tr,pn,exName(it.exId),it.ver,i+1,isNaN(x.kg)?'':fmt(x.kg),isNaN(x.reps)?'':x.reps,x.rir==null?'':x.rir,s.bw?fmt(s.bw):'',s.dur?Math.round(s.dur/60000):'','','','','','']));
-    for(const c of (s.cardio||[])) rows.push([d,s.tr,pn,exName(c.exId),c.mode,'','','','',s.bw?fmt(s.bw):'',s.dur?Math.round(s.dur/60000):'',c.tmin==null?'':fmt(c.tmin),c.km==null?'':fmt(c.km),c.hr==null?'':c.hr,c.rpe==null?'':c.rpe,cardioKcal(c,bwOr(s))]);}
+    for(const it of s.items) it.sets.forEach((x,i)=>rows.push([d,s.tr,pn,exName(it.exId),it.ver,i+1,isNaN(x.kg)?'':fmt(x.kg),isNaN(x.reps)?'':x.reps,x.rir==null?'':x.rir,s.bw?fmt(s.bw):'',s.dur?Math.round(s.dur/60000):'','','','','']));
+    for(const c of (s.cardio||[])) rows.push([d,s.tr,pn,exName(c.exId),c.mode,'','','','',s.bw?fmt(s.bw):'',s.dur?Math.round(s.dur/60000):'',c.tmin==null?'':fmt(c.tmin),c.km==null?'':fmt(c.km),c.hr==null?'':c.hr,cardioKcal(c,bwOr(s))]);}
   const r=await saveFile('dziennik-fbw-'+stamp()+'.csv','﻿'+rows.map(r=>r.map(q2).join(';')).join('\r\n'),'text/csv');
   if(r==='ok') toast('Plik CSV zapisany w Pobranych'); else if(r==='fail') toast('Nie udało się zapisać pliku');
 }
@@ -1342,7 +1292,7 @@ function finish(){
   const p=plan();
   const sess={id:rid('s'),date:when,tr:DRAFT.tr,plan:p.id,days:p.days,prio:p.prio,seqStep:step,items};
   const cardio=(DRAFT.cardio||[]).filter(c=>c.done||c.tmin!==''||c.km!=='').map(c=>{const o={key:c.key,exId:c.exId,mode:c.mode};
-    for(const f of ['rounds','work','rest','min','lissMin','tmin','km','hr','rpe','kcal','roundsDone']){const v=num(c[f]);if(!isNaN(v))o[f]=v}
+    for(const f of ['rounds','work','rest','min','lissMin','tmin','km','hr','kcal','roundsDone']){const v=num(c[f]);if(!isNaN(v))o[f]=v}
     if(!o.tmin) o.tmin=Math.round(cTotalSec(c)/60); return o});
   if(cardio.length) sess.cardio=cardio;
   if(CT) cEnd(false,true);
@@ -1410,7 +1360,7 @@ document.addEventListener('click',e=>{
     case 'cAddNo': ui.cAdd=false; break;
     case 'cAdd': {const last=[...SESS].reverse().flatMap(x=>x.cardio||[])[0]; DRAFT.cardio.push(cSuggest({key:'extra:'+el.dataset.v,exId:last?last.exId:'c_tread',mode:el.dataset.v,extra:true})); ui.cAdd=false; draftSave(); break}
     case 'cDel': {const ci=+el.dataset.c; if(CT&&CT.ci===ci){clearInterval(ctInt);CT=null;$('#ctimer').hidden=true;document.body.classList.remove('ct')} DRAFT.cardio.splice(ci,1); draftSave(); break}
-    case 'cMode': {const ci=+el.dataset.c, c=DRAFT.cardio[ci]; if(CT&&CT.ci===ci) return; const n=cSuggest({key:c.key,exId:c.exId,mode:el.dataset.v,extra:c.extra}); DRAFT.cardio[ci]=Object.assign(n,{tmin:c.tmin,km:c.km,hr:c.hr,rpe:c.rpe,kcal:c.kcal}); draftSave(); break}
+    case 'cMode': {const ci=+el.dataset.c, c=DRAFT.cardio[ci]; if(CT&&CT.ci===ci) return; const n=cSuggest({key:c.key,exId:c.exId,mode:el.dataset.v,extra:c.extra}); DRAFT.cardio[ci]=Object.assign(n,{tmin:c.tmin,km:c.km,hr:c.hr,kcal:c.kcal}); draftSave(); break}
     case 'cDone': {const c=DRAFT.cardio[+el.dataset.c]; c.done=!c.done; draftSave(); break}
     case 'cStart': if(CT) {toast('Minutnik już działa');return} cStart(+el.dataset.c); return;
     case 'ctPause': if(CT){CT.paused=!CT.paused;CT.last=Date.now();cTick()} return;
@@ -1421,6 +1371,7 @@ document.addEventListener('click',e=>{
       S.settings.chosen=true; ui={}; DRAFT=null; draftSave(); persist(); ensureDraft(); render(); window.scrollTo(0,0); return}
     case 'stripTgl': ui.strip=!ui.strip; break;
     case 'legend': ui.legend=ui.legend===i?null:i; break;
+    case 'lgd': {const k=el.dataset.k; ui.lgd=ui.lgd||{}; ui.lgd[k]=!ui.lgd[k]; break}
     case 'ptab': tab='settings'; ui={ptab:el.dataset.v}; render(); window.scrollTo(0,0); return;
     case 'more': ui.more=ui.more===el.dataset.id?null:el.dataset.id; break;
     case 'addSet': DRAFT.items[i].sets.push({kg:'',reps:'',done:false,rir:''}); draftSave(); break;
@@ -1559,3 +1510,8 @@ applyLook();
 render();
 initCloud();
 </script>
+</head>
+<body>
+
+</body>
+</html>
