@@ -5,6 +5,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.ContentValues;
 import android.content.Intent;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -108,6 +109,12 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        if (web != null) web.evaluateJavascript("window.onNativeResume&&window.onNativeResume()", null);
+    }
+
+    @Override
     protected void onPause() {
         super.onPause();
         CookieManager.getInstance().flush();
@@ -147,6 +154,32 @@ public class MainActivity extends Activity {
             runOnUiThread(() -> {
                 if (on) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            });
+        }
+
+        /** Snapshot that Post Przerywany reads through ShareProvider. */
+        @JavascriptInterface
+        public void publish(String json) {
+            getSharedPreferences(ShareProvider.PREFS, MODE_PRIVATE).edit().putString("share", json).apply();
+        }
+
+        /** Post Przerywany snapshot, "" when the app is missing. */
+        @JavascriptInterface
+        public String peer() {
+            try (Cursor c = getContentResolver().query(Uri.parse("content://pl.mariusz.postprzerywany.share/summary"), null, null, null, null)) {
+                if (c != null && c.moveToFirst()) {
+                    String v = c.getString(0);
+                    return v == null ? "" : v;
+                }
+            } catch (Exception ignored) { }
+            return "";
+        }
+
+        @JavascriptInterface
+        public void openPeer() {
+            runOnUiThread(() -> {
+                Intent i = getPackageManager().getLaunchIntentForPackage("pl.mariusz.postprzerywany");
+                if (i != null) startActivity(i);
             });
         }
 

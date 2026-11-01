@@ -1,8 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
+    <!-- Shared with Post Przerywany: only apps signed with the same key can read each other's data -->
+    <permission
+        android:name="pl.mariusz.SHARE_DATA"
+        android:protectionLevel="signature" />
+    <uses-permission android:name="pl.mariusz.SHARE_DATA" />
+
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.VIBRATE" />
+
+    <queries>
+        <package android:name="pl.mariusz.postprzerywany" />
+    </queries>
 
     <application
         android:allowBackup="true"
@@ -20,5 +30,11 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <provider
+            android:name=".ShareProvider"
+            android:authorities="pl.mariusz.dziennikfbw.share"
+            android:exported="true"
+            android:readPermission="pl.mariusz.SHARE_DATA" />
     </application>
 </manifest>

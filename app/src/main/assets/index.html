@@ -54,6 +54,12 @@ h2{font-family:var(--display);font-weight:800;text-transform:uppercase;font-size
 
 /* next-training hero */
 .hero{display:flex;flex-direction:column;gap:12px}
+.ppchip{display:flex;align-items:center;gap:10px;border-radius:12px;padding:9px 12px;border:1px solid var(--line);background:var(--surface);font-size:13px;text-align:left;width:100%}
+.ppchip i{width:10px;height:10px;border-radius:50%;flex:none;background:#ff8a5b;box-shadow:0 0 10px #ff8a5b}
+.ppchip.eat i{background:#34d399;box-shadow:0 0 10px #34d399}
+.ppchip b{font-variant-numeric:tabular-nums}
+.ppchip .pbar{flex:1;height:5px;border-radius:3px;background:var(--surface2);overflow:hidden;min-width:40px}
+.ppchip .pbar u{display:block;height:100%;background:linear-gradient(90deg,#ffb05c,#ff5e7a,#b26bff);text-decoration:none}
 .hero-top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .trname{font-family:var(--display);font-weight:800;font-size:64px;line-height:.85;letter-spacing:.01em}
 .strip{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
@@ -842,7 +848,7 @@ function cloudDo(fn){
   setCloud('sync');
   q=q.then(fn).then(()=>setCloud('cloud')).catch(e=>{console.warn(e);setCloud('error')});
 }
-function persist(){S.updatedAt=Date.now();lsSave();cloudDo(()=>prof().set({state:S}));}
+function persist(){S.updatedAt=Date.now();lsSave();cloudDo(()=>prof().set({state:S}));ppPublish();}
 async function initCloud(){
   if(!window.claude||!window.claude.use){setCloud('local');return}
   try{
@@ -1037,6 +1043,7 @@ function viewToday(){
       <div class="trname">${esc(tr)}</div></div>
       <div class="pick" role="group" aria-label="Wybierz trening">${trainings().map(t=>`<button type="button" class="chip" data-act="pickTr" data-tr="${esc(t)}" aria-pressed="${t===tr}">${esc(t)}</button>`).join('')}</div></div>
     <div class="nextline">Dalej: ${[1,2,3].map(k=>esc(s[(pos+k)%L])).join(' → ')}</div>
+    ${ppChip()}
     <div class="hrow"><button type="button" class="link" data-act="stripTgl" aria-expanded="${!!ui.strip}">📅 Rozkład ${ui.strip?'▴':'▾'}</button><span>Data: <button type="button" class="link" data-act="dateEdit">${dateTxt} ✎</button></span></div>
     ${ui.dateEdit?`<div class="row"><input type="date" id="trDate" value="${DRAFT.date||isoDay(Date.now())}" max="${isoDay(Date.now())}" aria-label="Data treningu" style="border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px 8px"><button type="button" class="sbtn" data-act="dateToday">Dziś</button></div>`:''}
     ${ui.strip?`<div class="strip">${strip}</div><span class="muted" style="font-size:12px">Dotknij ${p.schedule?'dzień w rozkładzie':'pozycję w kolejności'}, żeby ustawić, gdzie jesteś w planie.</span>`:''}
@@ -1482,7 +1489,7 @@ document.addEventListener('input',e=>{
   if(t.dataset&&t.dataset.c!=null&&DRAFT&&DRAFT.cardio){const c=DRAFT.cardio[+t.dataset.c]; if(c){if(t.dataset.cf)c[t.dataset.cf]=t.value; if(t.dataset.cr)c[t.dataset.cr]=t.value; draftSave()}}
   if(t.dataset&&t.dataset.f&&DRAFT){let v=t.value; if(t.dataset.f==='kg'&&t.dataset.as==='1'){v=v.trim().replace(/^-/,''); if(v!==''&&num(v)!==0) v='-'+v}
     DRAFT.items[+t.dataset.i].sets[+t.dataset.s][t.dataset.f]=v; draftSave()}
-  if(t.id==='bw'){const v=num(t.value); S.settings.bw=(v>0&&v<400)?v:null; clearTimeout(t._h); t._h=setTimeout(persist,600)}
+  if(t.id==='bw'){const v=num(t.value); S.settings.bw=(v>0&&v<400)?v:null; S.settings.bwAt=Date.now(); clearTimeout(t._h); t._h=setTimeout(persist,600)}
   if(t.id==='every'){const v=parseInt(t.value,10); if(v>=0&&v<=20){S.settings.every=v; clearTimeout(t._h); t._h=setTimeout(persist,600)}}
   if(t.id==='inc'){const v=num(t.value); if(v>0){S.settings.inc=v; clearTimeout(t._h); t._h=setTimeout(persist,600)}}
   if(t.dataset&&t.dataset.ed){const p=editPlan(); if(!p) return; const ed=t.dataset.ed;
@@ -1551,9 +1558,36 @@ document.addEventListener('focusin',e=>{const t=e.target;if(t.matches&&t.matches
 document.addEventListener('focusout',()=>{setTimeout(()=>{const a=document.activeElement;if(!a||!a.matches||!a.matches('input,textarea'))document.body.classList.remove('kb')},150)});
 if(window.visualViewport) visualViewport.addEventListener('resize',()=>{const a=document.activeElement;if(a&&a.matches&&a.matches('input,textarea'))keepVisible(a)});
 setInterval(()=>{const el=document.getElementById('wClock'); if(el&&DRAFT&&DRAFT.startedAt&&!DRAFT.pausedAt) el.textContent=fmtClock(wElapsed())},1000);
+/* ---------- Post Przerywany bridge (both APKs share a signing key) ---------- */
+let PP=null;
+function ppLoad(){PP=null;try{const r=window.Android&&Android.peer&&Android.peer();if(r)PP=JSON.parse(r)}catch(e){PP=null}
+  // body weight logged in Post Przerywany wins when it is newer than the one typed here
+  if(PP&&PP.weight&&PP.weight.kg>0&&PP.weight.d>(S.settings.bwAt||0)&&Number(S.settings.bw)!==PP.weight.kg){S.settings.bw=PP.weight.kg;S.settings.bwAt=PP.weight.d;lsSave();}}
+function ppPublish(){
+  if(!window.Android||!Android.publish) return;
+  try{const p=plan();
+    Android.publish(JSON.stringify({app:'fbw',v:1,at:Date.now(),bw:Number(S.settings.bw)||null,bwAt:S.settings.bwAt||null,
+      next:{tr:nextTr(),plan:p.name},
+      sessions:SESS.slice(-120).map(x=>({date:x.date,tr:x.tr,plan:(allPlans().find(q=>q.id===x.plan)||{}).name||'',dur:x.dur||null,kcal:sessKcal(x),noPlan:!!x.noPlan}))}));
+  }catch(e){}
+}
+function ppHm(ms){ms=Math.max(0,ms);const h=Math.floor(ms/36e5),m=Math.floor(ms%36e5/6e4);return h+':'+String(m).padStart(2,'0')}
+function ppChip(){
+  if(!PP) return '';
+  const now=Date.now();
+  if(PP.cur){const el=now-PP.cur.start,g=PP.cur.goalH*36e5,pc=Math.min(100,el/g*100);
+    return `<button type="button" class="ppchip" data-act="ppOpen" data-live="pp"><i></i><span>Post <b>${ppHm(el)}</b> / ${PP.cur.goalH} h</span><span class="pbar"><u style="width:${pc}%"></u></span><span class="muted">${el>=g?'cel ✓':'jeszcze '+ppHm(g-el)}</span></button>`;}
+  if(PP.window&&now<PP.window.end) return `<button type="button" class="ppchip eat" data-act="ppOpen" data-live="pp"><i></i><span>Okno jedzenia do <b>${new Date(PP.window.end).toTimeString().slice(0,5)}</b></span><span class="muted" style="margin-left:auto">zostało ${ppHm(PP.window.end-now)}</span></button>`;
+  return `<button type="button" class="ppchip" data-act="ppOpen" data-live="pp" style="opacity:.75"><i style="background:var(--muted);box-shadow:none"></i><span>Post Przerywany: brak trwającego postu</span></button>`;
+}
+document.addEventListener('click',e=>{const t=e.target.closest('[data-act="ppOpen"]');if(t){e.stopPropagation();try{Android.openPeer()}catch(_){}}},true);
+setInterval(()=>{const el=document.querySelector('[data-live="pp"]');if(el&&PP){const w=document.createElement('div');w.innerHTML=ppChip();if(w.firstElementChild&&el.outerHTML!==w.firstElementChild.outerHTML)el.replaceWith(w.firstElementChild)}},30000);
+window.onNativeResume=()=>{const had=JSON.stringify(PP);ppLoad();ppPublish();if(JSON.stringify(PP)!==had&&!document.querySelector('input:focus,textarea:focus'))render();};
+ppLoad();
 normalize();
 applyLook();
 render();
+ppPublish();
 initCloud();
 </script>
 </head>
