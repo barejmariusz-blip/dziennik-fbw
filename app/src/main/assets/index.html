@@ -491,6 +491,21 @@ const EX_MUSCLES={
 };
 // [id, name, Polish description, pattern, muscles, bodyweight?]
 const EXTRA_ROWS=[
+ /* stretching + yoga (time-based holds, no load) */
+ ['st_hams','Hamstring stretch','Rozciąganie tyłu uda w siadzie, wyprost nogi','iso','dwuglowe:1',0],
+ ['st_quads','Standing quad stretch','Rozciąganie przodu uda, pięta do pośladka','iso','czworoglowe:1',0],
+ ['st_chest','Doorway chest stretch','Rozciąganie klatki w framudze drzwi','iso','klatka:1 barki:.4',0],
+ ['st_delt','Cross-body shoulder stretch','Rozciąganie tylnej części barku','iso','barki:1',0],
+ ['st_hipflex','Kneeling hip flexor stretch','Rozciąganie zginaczy biodra w klęku','iso','czworoglowe:.5 brzuch:.3',0],
+ ['st_glute','Figure-4 glute stretch','Rozciąganie pośladków leżąc, noga na kolanie','iso','posladki:1',0],
+ ['st_calf','Wall calf stretch','Rozciąganie łydki przy ścianie','iso','lydki:1',0],
+ ['st_child','Child pose','Pozycja dziecka, rozciąganie pleców','iso','plecy:1 posladki:.3',0],
+ ['st_cat','Cat-cow','Kot-krowa, mobilizacja kręgosłupa','iso','plecy:.8 brzuch:.4',0],
+ ['st_cobra','Cobra stretch','Kobra, rozciąganie brzucha','iso','brzuch:1 plecy:.4',0],
+ ['st_dog','Downward dog','Pies z głową w dół','iso','dwuglowe:.6 lydki:.6 barki:.5',0],
+ ['st_warrior','Warrior II','Wojownik II, wykrok bokiem','knee','czworoglowe:1 posladki:.6',0],
+ ['st_tree','Tree pose','Drzewo, stanie na jednej nodze','iso','posladki:.4 brzuch:.4',0],
+ ['st_side','Side bend','Skłon boczny, rozciąganie boku tułowia','iso','brzuch:.6 plecy:.4',0],
  ['bwsquat','Przysiad bez obciążenia','Przysiad z masą ciała, pełny zakres','knee','czworoglowe:1 posladki:.7',1],
  ['plank','Plank','Deska: podpór na przedramionach, ciało w linii (na czas)','iso','brzuch:1',1],
  ['diamondpu','Pompki diamentowe','Pompki z dłońmi złączonymi w romb pod klatką','hpush','triceps:1 klatka:.7 barki:.3',1],
@@ -630,7 +645,7 @@ const EXTRA_ROWS=[
  ['ropehammer','Rope hammer curl','Uginanie chwytem młotkowym z liną wyciągu','iso','biceps:.8 przedramiona:.8'],
  ['crosshammer','Cross-body hammer curl','Uginanie młotkowe hantlem w poprzek tułowia','iso','biceps:.8 przedramiona:.7']
 ];
-const TIMED=new Set(['plank','hswall','tuckfl','pllean','lsit','deadhang']);
+const TIMED=new Set(['plank','hswall','tuckfl','pllean','lsit','deadhang','st_hams','st_quads','st_chest','st_delt','st_hipflex','st_glute','st_calf','st_child','st_cobra','st_dog','st_warrior','st_tree','st_side']);
 const MLOW={czworoglowe:'czworogłowe uda',dwuglowe:'dwugłowe uda',posladki:'pośladki',lydki:'łydki'};
 for(const [id,name,pl,pattern,m,bw] of EXTRA_ROWS){
   const mus=pm(m); EX_MUSCLES[id]=mus;
@@ -789,11 +804,11 @@ lpPlan('kalupp','Kalistenika – górna część','Push/Pull górna. 2-3 dni. Pr
 lpPlan('kalbody','Kalistenika – całe ciało','Full body, 3 dni. Push, Pull, Legs z masą ciała. Progresja wariantami.',{Day1:[['pushup',3,'8-15',0],['pull',3,'5-10',0],['bwsquat',3,'15-20',0],['crunch',3,'12-20',0]],Day2:[['dips',3,'6-12',0],['invrow',3,'8-15',0],['lunge',3,'12',0],['plank',3,'30-60 s',0]],Day3:[['diamondpu',3,'6-12',0],['chin',3,'5-10',0],['pistol',3,'6-10',0],['glutebr',3,'15',0]]},[['Day1',0,'Day2','Day3',0,0,0]]);
 lpPlan('kaliso','Kalistenika – isometria','Trenowanie statyczne. Handstand, planche, front lever, l-sit. 3-4 dni, niż objętość.',{Handstand:[['hswall',4,'20-40 s',0],['pikepu',3,'8-12',0]],Lever:[['tuckfl',4,'10-15 s',0],['pull',3,'5-8',0]],Planche:[['pllean',3,'15-30 s',0],['pppu',3,'8',0]],Core:[['lsit',4,'10-20 s',0],['plank',3,'30-60 s',0]]},[['Handstand','Lever',0,'Planche','Core',0,0]]);
 /* Mobilność — rozciąganie i joga */
-lpPlan('strq','Stretching – Quick','Post-treningowe. 5-10 min. Szybkie rozciąganie głównych grup mięśni.',{Post:[['crunch',2,'10-15',0],['lunge',2,'20 s',0],['hamc',2,'20 s',0],['chest',2,'20 s',0]]},[['Post',0,'Post',0,'Post',0,'Post',0,'Post',0,'Post',0,'Post',0]]);
-lpPlan('strf','Stretching – Full Body','Kompleksowe. 20-30 min. Pełne rozciąganie całego ciała.',{Full:[['crunch',3,'20 s',0],['lunge',3,'30 s',0],['squat',2,'30 s',0],['hamc',3,'30 s',0],['chest',3,'30 s',0],['shoulder',2,'30 s',0]]},[['Full',0,'Full',0,'Full',0,0]]);
-lpPlan('strd','Stretching – Deep','Głębokie. 30-45 min. Zaawansowane rozciąganie, PNF, myofascial release.',{Deep:[['crunch',4,'30-45 s',0],['lunge',3,'45 s',0],['squat',3,'45 s',0],['hamc',4,'45 s',0],['chest',3,'45 s',0],['hip',3,'45 s',0]]},[['Deep',0,'Deep',0,'Deep',0,0]]);
-lpPlan('yogab','Joga – Beginners','Podstawy. 20-30 min. Asany początkujące, oddychanie, relaksacja.',{Basic:[['plank',3,'30-60 s',0],['lunge',3,'each',0],['squat',2,'30 s',0],['crunch',2,'20 s',0],['glutebr',2,'15',0]]},[['Basic',0,'Basic',0,'Basic',0,'Basic',0]]);
-lpPlan('yogaf','Joga – Flow','Dynamiczna. 30-45 min. Vinyasa flow, więcej ruchu, cardio element.',{Flow:[['pushup',3,'10-15',0],['lunge',4,'10 per leg',0],['squat',3,'15-20',0],['plank',3,'45-60 s',0],['crunch',3,'20 s',0]]},[['Flow',0,'Flow',0,'Flow',0,0]]);
+lpPlan('strq','Stretching – Quick','Po treningu, 5-10 min. Krótkie rozciąganie głównych grup mięśni, 30 s na stronę.',{Post:[['st_hams',2,'30 s',0],['st_quads',2,'30 s',0],['st_chest',2,'30 s',0],['st_glute',2,'30 s',0]]},[['Post',0,'Post',0,'Post',0,'Post',0,'Post',0,'Post',0,'Post',0]]);
+lpPlan('strf','Stretching – Full Body','Kompleksowe, 20-30 min. Całe ciało, wolne oddychanie w każdym utrzymaniu.',{Full:[['st_cat',2,'10',0],['st_child',2,'30 s',0],['st_chest',3,'30 s',0],['st_delt',2,'30 s',0],['st_hipflex',2,'30 s',0],['st_quads',2,'30 s',0],['st_hams',3,'30 s',0],['st_glute',2,'30 s',0],['st_calf',2,'30 s',0],['st_cobra',2,'20 s',0]]},[['Full',0,'Full',0,'Full',0,0]]);
+lpPlan('strd','Stretching – Deep','Głębokie, 30-45 min. Dłuższe utrzymania 45-60 s, powolne wejście i wyjście z pozycji.',{Deep:[['st_hams',4,'45 s',0],['st_hipflex',3,'45 s',0],['st_quads',3,'45 s',0],['st_glute',3,'45 s',0],['st_chest',3,'45 s',0],['st_delt',3,'45 s',0],['st_child',2,'60 s',0]]},[['Deep',0,'Deep',0,'Deep',0,0]]);
+lpPlan('yogab','Joga – Beginners','Podstawy, 20-30 min. Proste asany, spokojny oddech, bez pośpiechu.',{Basic:[['st_child',2,'30 s',0],['st_cat',2,'10',0],['st_dog',3,'30 s',0],['st_cobra',2,'20 s',0],['st_tree',2,'30 s',0],['st_glute',2,'30 s',0],['glutebr',2,'15',0]]},[['Basic',0,'Basic',0,'Basic',0,'Basic',0]]);
+lpPlan('yogaf','Joga – Flow','Dynamiczna, 30-45 min. Asany połączone płynnie, więcej ruchu i wytrzymałości.',{Flow:[['st_dog',3,'30 s',0],['st_warrior',4,'30 s',0],['st_cat',2,'10',0],['st_cobra',3,'20 s',0],['plank',3,'45-60 s',0],['glutebr',3,'15',0],['st_side',2,'30 s',0]]},[['Flow',0,'Flow',0,'Flow',0,0]]);
 const CYCLES=[['LP'],['HD','VC','HC','VD'],['VC','HC','VD','HD'],['HC','VD','HD','VC'],['VD','HD','VC','HC'],['VC','VD'],['VD','VC'],['HD','HC'],['HC','HD'],['HD'],['VC'],['HC'],['VD']];
 const rid=(p)=>p+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
 
