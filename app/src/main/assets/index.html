@@ -770,7 +770,7 @@ try{const raw=localStorage.getItem(LS); if(raw){const o=JSON.parse(raw); if(o.S)
 try{const raw=localStorage.getItem(LSD); if(raw) DRAFT=JSON.parse(raw);}catch(e){}
 function normalize(){
   S.settings=Object.assign({inc:1.25,look:'classic',mode:'auto'},S.settings||{});
-  S.plans=S.plans||[]; S.planNames=S.planNames||{}; S.repPick=S.repPick||{}; S.customEx=S.customEx||{}; S.loadMode=S.loadMode||{}; S.cycles=S.cycles||{}; S.swaps=S.swaps||{};
+  S.plans=S.plans||[]; S.planNames=S.planNames||{}; S.repPick=S.repPick||{}; S.customEx=S.customEx||{}; S.loadMode=S.loadMode||{}; S.cycles=S.cycles||{}; S.swaps=S.swaps||{}; S.skips=S.skips||{};
   if(!S.activePlan||!allPlans().find(p=>p.id===S.activePlan)) S.activePlan='sz-'+(S.settings.days||3)+'-'+(S.settings.prio||1);
 }
 const lsSave=()=>{try{localStorage.setItem(LS,JSON.stringify({S,SESS}))}catch(e){}};
@@ -836,6 +836,8 @@ function seq(){const p=plan();return p.schedule?p.schedule.flat().filter(Boolean
 function nextTr(){const s=seq();return s[S.seqPos%s.length]}
 function trainings(){return plan().trNames}
 function swapKey(p,key){return p.builtin&&p.prio?p.prio+':'+key:p.id+'|'+key}
+// exercise excluded from the plan: not saved to the session, version cycle does not advance
+function isSkipped(it){return !!(S.skips||{})[swapKey(plan(),it.key)]}
 function slotsFor(tr){
   const p=plan();
   return (p.trainings[tr]||[]).map(sl=>({key:sl.key,def:sl.ex,cy:sl.cy,sets:sl.sets,reps:sl.reps,inc:sl.inc,cardio:sl.cardio,target:sl.target,exId:S.swaps[swapKey(p,sl.key)]||sl.ex}));
@@ -1012,6 +1014,7 @@ function viewToday(){
   }
   const recNow=SESS.length?Object.fromEntries(recovery().map(r=>[r.m,r])):null;
   DRAFT.items.forEach((it,idx)=>{
+    if(isSkipped(it)){html+=`<article class="ex skipped" aria-label="${esc((EXA(it.exId)||['?'])[0])}"><div class="ex-head"><div><div class="label">Pominięte w planie</div><div class="ex-name">${esc((EXA(it.exId)||['?'])[0])}</div></div></div><button type="button" class="link" data-act="skip" data-i="${idx}">Wróć do planu</button></article>`; return}
     const e=EXA(it.exId)||['?','iso','','',0], v=VERS[it.ver]||VERS.LP, last=lastFor(it.exId,it.ver), goal=last?last.kg+incFor(it):null, byReps=it.inc===0;
     const cyc=it.cy.map(x=>`<b class="${x===it.ver?'cur':''}">${x}</b>`).join('<span>›</span>');
     const alts=alternativesFor(it.exId).slice(0,24);
@@ -1029,6 +1032,7 @@ function viewToday(){
       ${ui.vpick===idx?`<div class="vpick"><span class="muted">Ustaw wersję:</span>${[...new Set(it.cy)].map(x=>`<button type="button" class="vmini v-${x}" data-act="setVer" data-i="${idx}" data-v="${x}">${x}</button>`).join('')}<button type="button" class="link" data-act="vpick" data-i="${idx}">Anuluj</button></div>`:''}
       ${it.cy.length>1?`<div class="cyc"><span>Cykl:</span>${cyc}<button type="button" class="infob" data-act="legend" data-i="${idx}" aria-label="Co znaczą wersje">ⓘ</button></div>`:''}
       ${ui.legend===idx?`<div class="legend"><div><b>HD</b><span>najciężej, mało powtórzeń (1-5), przerwa 2–3 min</span></div><div><b>HC</b><span>ciężko, 1-6 powtórzeń, przerwa 2–3 min</span></div><div><b>VC</b><span>średnio, 6-10 powtórzeń, przerwa 1–2 min</span></div><div><b>VD</b><span>lżej, więcej powtórzeń (6-20), przerwa 1 min</span></div><span class="muted">Co trening ćwiczenie przechodzi na kolejną wersję. Ciężar rośnie zgodnie z ustawieniem „Dodawaj ciężar co … treningów”.</span></div>`:''}
+      <div><button type="button" class="link" data-act="skip" data-i="${idx}">Pomiń w planie (nie liczy się do cyklu)</button></div>
       <div class="target">
         <div>${!it.reps&&REP_OPTS[it.ver]?`<button type="button" class="rbtn" data-act="rpick" data-i="${idx}" aria-expanded="${ui.rpick===idx}"><div class="label">Powtórzenia ▾</div><div class="v">${(()=>{const r=repRange(it),st=repStats(it.ver),top=/max/.test(r)?null:Number(r.split('-').pop());return esc(repLabel(r))+(st&&top!==null&&top<st.max?` <span class="muted">(max ${st.max})</span>`:'')})()}</div></button>`:`<div class="label">Powtórzenia</div><div class="v">${esc(repRange(it))}</div>`}</div>
         <div><div class="label">Ostatnio ${it.ver}</div><div class="v">${last?showKg(it.exId,last.kg)+' × '+(isNaN(last.reps)?'?':last.reps)+rirTxt(last.rir):'—'}</div>${last?`<div class="muted">${dstr(last.date)}${effKg(it.exId,last.kg,last.bw||null)!==null?' · efektywnie '+fmt(effKg(it.exId,last.kg,last.bw||null))+' kg':''}</div>`:''}</div>
@@ -1277,7 +1281,7 @@ function dupPlan(src){
 
 /* ---------- actions ---------- */
 function finish(){
-  const items=DRAFT.items.map(it=>({key:it.key,exId:it.exId,ver:it.ver,sets:it.sets.filter(s=>s.done||(s.kg!==''&&s.reps!=='')).map(s=>{const o={kg:num(s.kg),reps:num(s.reps)}; if(s.rir!==''&&s.rir!=null) o.rir=+s.rir; return o})}));
+  const items=DRAFT.items.filter(it=>!isSkipped(it)).map(it=>({key:it.key,exId:it.exId,ver:it.ver,sets:it.sets.filter(s=>s.done||(s.kg!==''&&s.reps!=='')).map(s=>{const o={kg:num(s.kg),reps:num(s.reps)}; if(s.rir!==''&&s.rir!=null) o.rir=+s.rir; return o})}));
   const s=seq(), L=s.length, cur=S.seqPos%L;
   let step=1; if(s[cur]!==DRAFT.tr){for(let k=1;k<=L;k++){if(s[(cur+k)%L]===DRAFT.tr){step=k+1;break}}}
   const when=DRAFT.date?new Date(DRAFT.date+'T12:00').getTime():Date.now();
@@ -1368,6 +1372,7 @@ document.addEventListener('click',e=>{
     case 'addSet': DRAFT.items[i].sets.push({kg:'',reps:'',done:false,rir:''}); draftSave(); break;
     case 'delSet': {const ss=DRAFT.items[i].sets; if(ss.length>1) ss.pop(); draftSave(); break}
     case 'swap': ui.swap=ui.swap===i?null:i; break;
+    case 'skip': {const it=DRAFT.items[i], k=swapKey(plan(),it.key); if(S.skips[k]) delete S.skips[k]; else S.skips[k]=1; persist(); draftSave(); toast(S.skips[k]?`${exName(it.exId)}: pominięte w planie`:`${exName(it.exId)}: wraca do planu`); break}
     case 'swapTo': {const it=DRAFT.items[i], to=el.dataset.ex, p=plan(), k=swapKey(p,it.key);
       if(to===it.def) delete S.swaps[k]; else S.swaps[k]=to;
       it.exId=to; ui.swap=null; persist(); draftSave(); toast('Zamieniono. Cykl wersji zostaje bez zmian.'); break}
