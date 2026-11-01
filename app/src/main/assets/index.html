@@ -1387,20 +1387,28 @@ function challenges(){
 /* ---------- endless challenges: a ladder of named targets; past the last one it keeps going ×2, ×3, … ---------- */
 const LADDERS=[
   {key:'ton',em:'🏋️',title:'Tonaż bez końca',unit:'t',list:[
-    [0.5,'🎹','Fortepian koncertowy'],[1.5,'🚗','Samochód osobowy'],[6,'🐘','Słoń afrykański'],[12,'🚌','Autobus miejski'],[40,'🚛','TIR'],
-    [70,'🪖','Czołg'],[150,'🐋','Płetwal błękitny'],[225,'🗽','Statua Wolności'],[400,'✈️','Boeing 747'],[10100,'🗼','Wieża Eiffla'],
-    [52000,'🚢','Titanic'],[100000,'⚓','Lotniskowiec'],[750000,'🏙️','Pałac Kultury i Nauki'],[6000000,'🔺','Piramida Cheopsa'],
-    [160e9,'🏔️','Mount Everest'],[7.35e19,'🌕','Księżyc'],[5.97e21,'🌍','Ziemia'],[1.9e24,'🪐','Jowisz'],[1.99e27,'☀️','Słońce']]},
+    [0.1,'🧺','Pralka'],[0.25,'🏍️','Motocykl'],[0.5,'🎹','Fortepian koncertowy'],[0.7,'🐄','Krowa'],[1,'🐻‍❄️','Niedźwiedź polarny ×2'],[1.5,'🚗','Samochód osobowy'],
+    [2.5,'🦛','Hipopotam'],[4,'🦏','Nosorożec ×2'],[6,'🐘','Słoń afrykański'],[8,'🦖','Tyranozaur'],[12,'🚌','Autobus miejski'],[18,'🚒','Wóz strażacki'],
+    [25,'🦕','Diplodok'],[40,'🚛','TIR'],[62,'🪖','Czołg Leopard 2'],[80,'🚂','Lokomotywa EU07'],[150,'🐋','Płetwal błękitny'],[225,'🗽','Statua Wolności'],
+    [300,'🐋','Dwa płetwale'],[400,'✈️','Boeing 747'],[640,'🛩️','Antonow Mrija'],[1000,'🏆','Tysiąc ton'],[2000,'🚀','Prom kosmiczny na starcie'],
+    [2970,'🚀','Rakieta Saturn V'],[5000,'🛸','Starship na starcie'],[7300,'🗼','Stal Wieży Eiffla'],[10100,'🗼','Cała Wieża Eiffla'],
+    [52000,'🚢','Titanic'],[100000,'⚓','Lotniskowiec'],[250000,'⚓','Flota lotniskowców'],[750000,'🏙️','Pałac Kultury i Nauki'],[6000000,'🔺','Piramida Cheopsa'],
+    [660e6,'🌊','Cała woda w Śniardwach'],[160e9,'🏔️','Mount Everest'],[21.7e12,'🌊','Cała woda w Bałtyku'],[9.4e17,'☄️','Planeta karłowata Ceres'],
+    [7.35e19,'🌕','Księżyc'],[6.4e20,'🔴','Mars'],[5.97e21,'🌍','Ziemia'],[1.9e24,'🪐','Jowisz'],[1.99e27,'☀️','Słońce']]},
   {key:'km',em:'🏃',title:'Kilometry bez końca',unit:'km',list:[
-    [5,'🌳','Parkrun'],[21.1,'🏅','Półmaraton'],[42.195,'🏃','Maraton'],[100,'💯','Ultramaraton'],[300,'🚆','Warszawa–Kraków'],
-    [650,'⛰️','Gdańsk–Zakopane'],[1600,'🥖','Warszawa–Paryż'],[6850,'🗽','Warszawa–Nowy Jork'],[21196,'🧱','Wielki Mur Chiński'],
-    [40075,'🌍','Dookoła Ziemi'],[384400,'🌕','Na Księżyc'],[768800,'🚀','Księżyc i z powrotem'],[54.6e6,'🔴','Na Marsa'],[149.6e6,'☀️','Do Słońca']]},
+    [1,'👣','Pierwszy kilometr'],[5,'🌳','Parkrun'],[10,'🔟','Dycha'],[21.1,'🏅','Półmaraton'],[42.195,'🏃','Maraton'],[70,'🌊','Hel–Władysławowo i z powrotem ×2'],
+    [100,'💯','Ultramaraton'],[160,'🦶','Ultra 100 mil'],[300,'🚆','Warszawa–Kraków'],[500,'🏞️','Szlak Orlich Gniazd ×3'],[650,'⛰️','Gdańsk–Zakopane'],
+    [1047,'🏞️','Cała Wisła'],[1300,'🔁','Gdańsk–Zakopane i z powrotem'],[1600,'🥖','Warszawa–Paryż'],[2500,'🍕','Warszawa–Rzym i kawałek'],[4000,'🌍','Przez całą Europę'],
+    [6850,'🗽','Warszawa–Nowy Jork'],[9289,'🚂','Kolej Transsyberyjska'],[15000,'🦘','Warszawa–Sydney'],[21196,'🧱','Wielki Mur Chiński'],[40075,'🌍','Dookoła Ziemi'],
+    [100000,'🛰️','Dwa i pół okrążenia Ziemi'],[384400,'🌕','Na Księżyc'],[768800,'🚀','Księżyc i z powrotem'],[54.6e6,'🔴','Na Marsa'],[149.6e6,'☀️','Do Słońca']]},
   {key:'n',em:'🏆',title:'Ranga bywalca',unit:'treningów',list:[
-    [10,'🥚','Nowicjusz'],[25,'🐣','Bywalec'],[50,'🙂','Stały klient'],[100,'🔩','Żelazny'],[200,'⚙️','Stalowy'],[350,'🛡️','Tytanowy'],
-    [500,'💎','Diamentowy'],[750,'🦁','Legenda'],[1000,'🐉','Mit'],[1500,'⚡','Półbóg'],[2000,'👑','Bóstwo']]},
+    [1,'🌱','Świeżak'],[5,'🥚','Debiutant'],[10,'🐣','Nowicjusz'],[15,'📘','Uczeń'],[25,'🐥','Bywalec'],[40,'🙂','Regularny'],[50,'😎','Stały klient'],
+    [75,'🪵','Zaprawiony'],[100,'🔩','Żelazny'],[150,'🥉','Brązowy'],[200,'⚙️','Stalowy'],[250,'🥈','Srebrny'],[300,'🥇','Złoty'],[350,'🛡️','Tytanowy'],
+    [400,'💠','Platynowy'],[500,'💎','Diamentowy'],[600,'🥋','Mistrz'],[750,'🦁','Legenda'],[1000,'🐉','Mit'],[1250,'🗿','Tytan'],[1500,'⚡','Półbóg'],[2000,'👑','Bóstwo']]},
   {key:'min',em:'⏳',title:'Czas na siłowni',unit:'h',list:[
-    [10,'🎬','Trylogia Władcy Pierścieni ×1'],[24,'🌗','Pełna doba'],[100,'🛫','Lot dookoła świata'],[168,'📆','Cały tydzień'],
-    [500,'🏕️','Trzy tygodnie pod namiotem'],[1000,'📚','Studia magisterskie z żelaza'],[8760,'🎂','Cały rok bez przerwy']]},
+    [1,'⏱️','Pierwsza godzina'],[5,'🎮','Długa sesja grania'],[8,'💼','Pełny dzień pracy'],[11.4,'🎬','Władca Pierścieni (wersja rozszerzona)'],[24,'🌗','Pełna doba'],
+    [50,'📺','Cały serial'],[72,'🏕️','Długi weekend'],[100,'🛫','Lot dookoła świata'],[168,'📆','Cały tydzień'],[250,'🎒','Kolonie letnie'],[336,'🏖️','Dwa tygodnie urlopu'],
+    [500,'🏕️','Trzy tygodnie pod namiotem'],[720,'🗓️','Cały miesiąc'],[1000,'📚','Studia magisterskie z żelaza'],[2000,'🧱','Rok pracy na etacie'],[4380,'🌓','Pół roku'],[8760,'🎂','Cały rok bez przerwy']]},
 ];
 function bigNum(v,unit){
   const sc=[[1e27,'kwadryliardów'],[1e24,'kwadrylionów'],[1e21,'tryliardów'],[1e18,'trylionów'],[1e15,'biliardów'],[1e12,'bilionów'],[1e9,'mld'],[1e6,'mln']];
