@@ -631,7 +631,7 @@ function sessionLoad(s){
 }
 function fatigueAt(m,at){
   let f=0;
-  for(const s of SESS){const h=(at-s.date)/36e5; if(h<0||h>240) continue; f+=sessionLoad(s)[m]*Math.exp(-h/TAU[m]);}
+  for(const s of SESS){if(s.noPlan) continue; const h=(at-s.date)/36e5; if(h<0||h>240) continue; f+=sessionLoad(s)[m]*Math.exp(-h/TAU[m]);}
   return f;
 }
 function recovery(now=Date.now()){
@@ -639,7 +639,7 @@ function recovery(now=Date.now()){
     const pct=Math.max(0,Math.min(100,Math.round(100-fatigueAt(m,now)/CAP*100)));
     let hoursTo90=0;
     if(pct<90){for(let h=1;h<=240;h++){if(100-fatigueAt(m,now+h*36e5)/CAP*100>=90){hoursTo90=h;break}}}
-    let lastHit=null; for(let i=SESS.length-1;i>=0;i--){if(sessionLoad(SESS[i])[m]>0&&SESS[i].date<=now){lastHit=SESS[i].date;break}}
+    let lastHit=null; for(let i=SESS.length-1;i>=0;i--){if(SESS[i].noPlan) continue; if(sessionLoad(SESS[i])[m]>0&&SESS[i].date<=now){lastHit=SESS[i].date;break}}
     return {m,pct,hoursTo90,lastHit};
   });
 }
@@ -697,7 +697,7 @@ const C_MET={}; for(const [id,name,met] of CARDIO_EX){EX[id]=[name,'cardio','','
 const CMODES={HIIT:'HIIT · interwały',LISS:'LISS · stałe tempo',MIX:'MIX · LISS + HIIT'};
 const CDEF={HIIT:{rounds:8,work:60,rest:60},LISS:{min:20},MIX:{lissMin:10,rounds:3,work:60,rest:60}};
 function cTotalSec(c){const N=+c.rounds||0,W=+c.work||0,R=+c.rest||0,h=N*(W+R)-(N>0?R:0);return c.mode==='LISS'?(+c.min||0)*60:c.mode==='MIX'?(+c.lissMin||0)*60+h:h}
-function lastCardio(c){for(let i=SESS.length-1;i>=0;i--){const a=(SESS[i].cardio||[]).find(x=>x.key===c.key||(x.exId===c.exId&&x.mode===c.mode));if(a)return Object.assign({date:SESS[i].date},a)}return null}
+function lastCardio(c){for(let i=SESS.length-1;i>=0;i--){if(SESS[i].noPlan) continue; const a=(SESS[i].cardio||[]).find(x=>x.key===c.key||(x.exId===c.exId&&x.mode===c.mode));if(a)return Object.assign({date:SESS[i].date},a)}return null}
 // suggestion = plan target moved forward from last time: LISS +2 min, HIIT +1 round, run-walk +work seconds after a full set
 function cSuggest(slot){
   const t=Object.assign({},CDEF[slot.mode],slot.target||{}), c={key:slot.key,exId:slot.exId,mode:slot.mode,rounds:t.rounds,work:t.work,rest:t.rest,min:t.min,lissMin:t.lissMin};
@@ -770,7 +770,7 @@ try{const raw=localStorage.getItem(LS); if(raw){const o=JSON.parse(raw); if(o.S)
 try{const raw=localStorage.getItem(LSD); if(raw) DRAFT=JSON.parse(raw);}catch(e){}
 function normalize(){
   S.settings=Object.assign({inc:1.25,look:'classic',mode:'auto'},S.settings||{});
-  S.plans=S.plans||[]; S.planNames=S.planNames||{}; S.repPick=S.repPick||{}; S.customEx=S.customEx||{}; S.loadMode=S.loadMode||{}; S.cycles=S.cycles||{}; S.swaps=S.swaps||{}; S.skips=S.skips||{};
+  S.plans=S.plans||[]; S.planNames=S.planNames||{}; S.repPick=S.repPick||{}; S.customEx=S.customEx||{}; S.loadMode=S.loadMode||{}; S.cycles=S.cycles||{}; S.swaps=S.swaps||{}; 
   if(!S.activePlan||!allPlans().find(p=>p.id===S.activePlan)) S.activePlan='sz-'+(S.settings.days||3)+'-'+(S.settings.prio||1);
 }
 const lsSave=()=>{try{localStorage.setItem(LS,JSON.stringify({S,SESS}))}catch(e){}};
@@ -836,8 +836,6 @@ function seq(){const p=plan();return p.schedule?p.schedule.flat().filter(Boolean
 function nextTr(){const s=seq();return s[S.seqPos%s.length]}
 function trainings(){return plan().trNames}
 function swapKey(p,key){return p.builtin&&p.prio?p.prio+':'+key:p.id+'|'+key}
-// exercise excluded from the plan: not saved to the session, version cycle does not advance
-function isSkipped(it){return !!(S.skips||{})[swapKey(plan(),it.key)]}
 function slotsFor(tr){
   const p=plan();
   return (p.trainings[tr]||[]).map(sl=>({key:sl.key,def:sl.ex,cy:sl.cy,sets:sl.sets,reps:sl.reps,inc:sl.inc,cardio:sl.cardio,target:sl.target,exId:S.swaps[swapKey(p,sl.key)]||sl.ex}));
@@ -854,11 +852,11 @@ function shortKg(kg){return isNaN(kg)?'?':kg<0?'as.'+fmt(-kg):fmt(kg)}
 function goalTxt(exId,g){if(g===null)return 'pierwszy raz';if(assistMode(exId)||g<0)return g>=0?'bez asysty':'≤ '+fmt(-g)+' kg asysty';return '≥ '+(loadKind(exId)===1?'+':'')+fmt(g)+' kg'}
 function kgShown(exId,v){if(!assistMode(exId)||v==='')return v;const n=num(v);return isNaN(n)?v:fmt(Math.abs(n))}
 // best kg for exercise+version in sessions before index `upto` (default: all saved sessions)
-function bestBefore(exId,ver,upto){let b=-Infinity;const n=upto==null?SESS.length:upto;for(let i=0;i<n;i++)for(const it of SESS[i].items)if(it.exId===exId&&it.ver===ver)for(const x of it.sets)if(!isNaN(x.kg)&&x.kg>b)b=x.kg;return b}
+function bestBefore(exId,ver,upto){let b=-Infinity;const n=upto==null?SESS.length:upto;for(let i=0;i<n;i++)if(!SESS[i].noPlan)for(const it of SESS[i].items)if(it.exId===exId&&it.ver===ver)for(const x of it.sets)if(!isNaN(x.kg)&&x.kg>b)b=x.kg;return b}
 function sessPRs(k){const s=SESS[k],out=[];for(const it of s.items){const prev=bestBefore(it.exId,it.ver,k);if(!isFinite(prev))continue;const m=Math.max(...it.sets.map(x=>isNaN(x.kg)?-Infinity:x.kg));if(isFinite(m)&&m>prev)out.push({exId:it.exId,ver:it.ver,kg:m,prev})}return out}
 function sessLoad(s){let sets=0,ton=0;for(const it of s.items)for(const x of it.sets){sets++;const kg=loadKind(it.exId)?effKg(it.exId,x.kg,s.bw||null):x.kg;if(kg>0&&x.reps>0)ton+=kg*x.reps}return {sets,ton}}
 function lastFor(exId,ver){
-  for(let i=SESS.length-1;i>=0;i--){const it=SESS[i].items.find(x=>x.exId===exId&&x.ver===ver);
+  for(let i=SESS.length-1;i>=0;i--){if(SESS[i].noPlan) continue; const it=SESS[i].items.find(x=>x.exId===exId&&x.ver===ver);
     if(it){let best=null;for(const s of it.sets){if(!isNaN(s.kg)&&(best===null||s.kg>best.kg||(s.kg===best.kg&&s.reps>best.reps)))best=s}
       if(best) return {kg:best.kg,reps:best.reps,rir:best.rir,date:SESS[i].date,bw:SESS[i].bw}}}
   return null;
@@ -1014,7 +1012,6 @@ function viewToday(){
   }
   const recNow=SESS.length?Object.fromEntries(recovery().map(r=>[r.m,r])):null;
   DRAFT.items.forEach((it,idx)=>{
-    if(isSkipped(it)){html+=`<article class="ex skipped" aria-label="${esc((EXA(it.exId)||['?'])[0])}"><div class="ex-head"><div><div class="label">Pominięte w planie</div><div class="ex-name">${esc((EXA(it.exId)||['?'])[0])}</div></div></div><button type="button" class="link" data-act="skip" data-i="${idx}">Wróć do planu</button></article>`; return}
     const e=EXA(it.exId)||['?','iso','','',0], v=VERS[it.ver]||VERS.LP, last=lastFor(it.exId,it.ver), goal=last?last.kg+incFor(it):null, byReps=it.inc===0;
     const cyc=it.cy.map(x=>`<b class="${x===it.ver?'cur':''}">${x}</b>`).join('<span>›</span>');
     const alts=alternativesFor(it.exId).slice(0,24);
@@ -1032,7 +1029,6 @@ function viewToday(){
       ${ui.vpick===idx?`<div class="vpick"><span class="muted">Ustaw wersję:</span>${[...new Set(it.cy)].map(x=>`<button type="button" class="vmini v-${x}" data-act="setVer" data-i="${idx}" data-v="${x}">${x}</button>`).join('')}<button type="button" class="link" data-act="vpick" data-i="${idx}">Anuluj</button></div>`:''}
       ${it.cy.length>1?`<div class="cyc"><span>Cykl:</span>${cyc}<button type="button" class="infob" data-act="legend" data-i="${idx}" aria-label="Co znaczą wersje">ⓘ</button></div>`:''}
       ${ui.legend===idx?`<div class="legend"><div><b>HD</b><span>najciężej, mało powtórzeń (1-5), przerwa 2–3 min</span></div><div><b>HC</b><span>ciężko, 1-6 powtórzeń, przerwa 2–3 min</span></div><div><b>VC</b><span>średnio, 6-10 powtórzeń, przerwa 1–2 min</span></div><div><b>VD</b><span>lżej, więcej powtórzeń (6-20), przerwa 1 min</span></div><span class="muted">Co trening ćwiczenie przechodzi na kolejną wersję. Ciężar rośnie zgodnie z ustawieniem „Dodawaj ciężar co … treningów”.</span></div>`:''}
-      <div><button type="button" class="link" data-act="skip" data-i="${idx}">Pomiń w planie (nie liczy się do cyklu)</button></div>
       <div class="target">
         <div>${!it.reps&&REP_OPTS[it.ver]?`<button type="button" class="rbtn" data-act="rpick" data-i="${idx}" aria-expanded="${ui.rpick===idx}"><div class="label">Powtórzenia ▾</div><div class="v">${(()=>{const r=repRange(it),st=repStats(it.ver),top=/max/.test(r)?null:Number(r.split('-').pop());return esc(repLabel(r))+(st&&top!==null&&top<st.max?` <span class="muted">(max ${st.max})</span>`:'')})()}</div></button>`:`<div class="label">Powtórzenia</div><div class="v">${esc(repRange(it))}</div>`}</div>
         <div><div class="label">Ostatnio ${it.ver}</div><div class="v">${last?showKg(it.exId,last.kg)+' × '+(isNaN(last.reps)?'?':last.reps)+rirTxt(last.rir):'—'}</div>${last?`<div class="muted">${dstr(last.date)}${effKg(it.exId,last.kg,last.bw||null)!==null?' · efektywnie '+fmt(effKg(it.exId,last.kg,last.bw||null))+' kg':''}</div>`:''}</div>
@@ -1055,7 +1051,8 @@ function viewToday(){
   });
   if(DRAFT.cardio.length) html+=`<h2 style="font-size:16px;margin-top:2px">Cardio</h2>`+DRAFT.cardio.map(cardioCard).join('');
   html+=ui.cAdd?`<div class="notice"><b>Dodaj cardio</b><div class="row">${Object.keys(CMODES).map(m=>`<button type="button" class="btn ghost" data-act="cAdd" data-v="${m}">${m}</button>`).join('')}<button type="button" class="link" data-act="cAddNo">Anuluj</button></div><span class="muted">HIIT: interwały, wysiłek 10/10. LISS: stałe tempo, 5/10. MIX: najpierw LISS, potem HIIT.</span></div>`:`<button type="button" class="btn ghost wide" data-act="cAddAsk">+ Cardio</button>`;
-  html+=`<button type="button" class="btn wide" data-act="finish">Zakończ trening ${esc(tr)}</button>
+  html+=`<label class="muted" style="display:flex;gap:8px;align-items:center;font-size:13px;margin:6px 0"><input type="checkbox" data-act="noplan" ${DRAFT.noPlan?'checked':''}> Ten trening nie liczy się do planu (zapisz w historii, bez cyklu i postępu)</label>
+  <button type="button" class="btn wide" data-act="finish">Zakończ trening ${esc(tr)}</button>
   <p class="muted" style="margin:0;font-size:13px">Zakończony trening liczy się jako zrobiony w całości: wszystkie ćwiczenia przechodzą na kolejną wersję, także te bez wpisanych serii. Pusty ciężar przy ✓ wpisuje cel.</p>`;
   return html;
 }
@@ -1281,12 +1278,13 @@ function dupPlan(src){
 
 /* ---------- actions ---------- */
 function finish(){
-  const items=DRAFT.items.filter(it=>!isSkipped(it)).map(it=>({key:it.key,exId:it.exId,ver:it.ver,sets:it.sets.filter(s=>s.done||(s.kg!==''&&s.reps!=='')).map(s=>{const o={kg:num(s.kg),reps:num(s.reps)}; if(s.rir!==''&&s.rir!=null) o.rir=+s.rir; return o})}));
+  const items=DRAFT.items.map(it=>({key:it.key,exId:it.exId,ver:it.ver,sets:it.sets.filter(s=>s.done||(s.kg!==''&&s.reps!=='')).map(s=>{const o={kg:num(s.kg),reps:num(s.reps)}; if(s.rir!==''&&s.rir!=null) o.rir=+s.rir; return o})}));
   const s=seq(), L=s.length, cur=S.seqPos%L;
   let step=1; if(s[cur]!==DRAFT.tr){for(let k=1;k<=L;k++){if(s[(cur+k)%L]===DRAFT.tr){step=k+1;break}}}
   const when=DRAFT.date?new Date(DRAFT.date+'T12:00').getTime():Date.now();
   const p=plan();
   const sess={id:rid('s'),date:when,tr:DRAFT.tr,plan:p.id,days:p.days,prio:p.prio,seqStep:step,items};
+  if(DRAFT.noPlan) sess.noPlan=true;
   const cardio=(DRAFT.cardio||[]).filter(c=>c.done||c.tmin!==''||c.km!=='').map(c=>{const o={key:c.key,exId:c.exId,mode:c.mode};
     for(const f of ['rounds','work','rest','min','lissMin','tmin','km','hr','met','rpe','kcal','roundsDone']){const v=num(c[f]);if(!isNaN(v))o[f]=v}
     if(!o.tmin) o.tmin=Math.round(cTotalSec(c)/60); return o});
@@ -1294,8 +1292,8 @@ function finish(){
   if(CT) cEnd(false,true);
   if(DRAFT.startedAt) sess.dur=wElapsed();
   if(Number(S.settings.bw)>0) sess.bw=Number(S.settings.bw);
-  for(const it of items) S.cycles[it.key]=(S.cycles[it.key]||0)+1;
-  S.seqPos+=step;
+  if(!DRAFT.noPlan){for(const it of items) S.cycles[it.key]=(S.cycles[it.key]||0)+1;
+  S.seqPos+=step;}
   SESS.push(sess); SESS.sort((x,y)=>x.date-y.date);
   persist(); cloudDo(()=>prof().collection('sessions').doc(sess.id).set(sess));
   DRAFT=null; draftSave(); ui={}; try{wake&&wake.release()}catch(e){} try{window.Android&&Android.keepAwake&&Android.keepAwake(false)}catch(e){}
@@ -1372,10 +1370,10 @@ document.addEventListener('click',e=>{
     case 'addSet': DRAFT.items[i].sets.push({kg:'',reps:'',done:false,rir:''}); draftSave(); break;
     case 'delSet': {const ss=DRAFT.items[i].sets; if(ss.length>1) ss.pop(); draftSave(); break}
     case 'swap': ui.swap=ui.swap===i?null:i; break;
-    case 'skip': {const it=DRAFT.items[i], k=swapKey(plan(),it.key); if(S.skips[k]) delete S.skips[k]; else S.skips[k]=1; persist(); draftSave(); toast(S.skips[k]?`${exName(it.exId)}: pominięte w planie`:`${exName(it.exId)}: wraca do planu`); break}
     case 'swapTo': {const it=DRAFT.items[i], to=el.dataset.ex, p=plan(), k=swapKey(p,it.key);
       if(to===it.def) delete S.swaps[k]; else S.swaps[k]=to;
       it.exId=to; ui.swap=null; persist(); draftSave(); toast('Zamieniono. Cykl wersji zostaje bez zmian.'); break}
+    case 'noplan': DRAFT.noPlan=!DRAFT.noPlan; draftSave(); break;
     case 'finish': finish(); return;
     case 'del': ui.delId=el.dataset.id; break;
     case 'delNo': ui.delId=null; break;
