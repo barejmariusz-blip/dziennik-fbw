@@ -6,6 +6,9 @@ import android.content.ClipboardManager;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
+import android.media.AudioAttributes;
+import android.media.AudioFormat;
+import android.media.AudioTrack;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -155,6 +158,42 @@ public class MainActivity extends Activity {
                 if (on) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                 else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
             });
+        }
+
+        /**
+         * Rest-timer beep. alarm=true plays on the alarm stream (loud like an alarm clock,
+         * independent of music volume). vol 0..1.5 — above 1 the tone is soft-clipped for extra loudness.
+         */
+        @JavascriptInterface
+        public void tone(final int freq, final int ms, final float vol, final boolean alarm) {
+            new Thread(() -> {
+                AudioTrack t = null;
+                try {
+                    int rate = 44100, n = Math.max(1, rate * Math.max(60, Math.min(ms, 3000)) / 1000);
+                    short[] buf = new short[n];
+                    float gain = Math.max(0f, Math.min(vol, 1.5f));
+                    int fade = rate / 100;
+                    for (int i = 0; i < n; i++) {
+                        double ph = 2 * Math.PI * freq * i / rate;
+                        double v = Math.sin(ph) + 0.35 * Math.sin(3 * ph) + 0.2 * Math.sin(5 * ph); // brighter, cuts through noise
+                        v = Math.tanh(v * gain * 1.6) / Math.tanh(1.6);                          // soft clip, no harsh distortion
+                        double env = Math.min(1.0, Math.min(i, n - 1 - i) / (double) fade);
+                        buf[i] = (short) (v * env * 32000);
+                    }
+                    AudioAttributes aa = new AudioAttributes.Builder()
+                            .setUsage(alarm ? AudioAttributes.USAGE_ALARM : AudioAttributes.USAGE_MEDIA)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build();
+                    AudioFormat af = new AudioFormat.Builder().setSampleRate(rate)
+                            .setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build();
+                    t = new AudioTrack(aa, af, n * 2, AudioTrack.MODE_STATIC, android.media.AudioManager.AUDIO_SESSION_ID_GENERATE);
+                    t.write(buf, 0, n);
+                    t.play();
+                    Thread.sleep(ms + 80L);
+                } catch (Exception ignored) {
+                } finally {
+                    if (t != null) try { t.release(); } catch (Exception ignored) { }
+                }
+            }).start();
         }
 
         /** Snapshot that Post Przerywany reads through ShareProvider. */

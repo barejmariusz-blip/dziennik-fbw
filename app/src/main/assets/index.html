@@ -54,6 +54,19 @@ h2{font-family:var(--display);font-weight:800;text-transform:uppercase;font-size
 
 /* next-training hero */
 .hero{display:flex;flex-direction:column;gap:12px}
+.chsum{display:flex;align-items:center;gap:14px;margin:12px 0}
+.chsum .big{font-family:var(--display);font-weight:800;font-size:44px;line-height:1}
+.chg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
+.cht{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:4px;position:relative}
+.cht .em{font-size:26px;line-height:1;filter:grayscale(1);opacity:.45}
+.cht.on{border-color:var(--accent)}
+.cht.on .em{filter:none;opacity:1}
+.cht b{font-size:14px;line-height:1.2}
+.cht small{font-size:12px;color:var(--muted);line-height:1.3}
+.cht .pb{height:5px;border-radius:3px;background:var(--surface2);overflow:hidden;margin-top:4px}
+.cht .pb i{display:block;height:100%;background:var(--accent)}
+.cht .ok{position:absolute;top:10px;right:10px;font-size:11px;font-weight:800;color:var(--accent)}
+.chcat{font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-top:16px}
 .ppchip{display:flex;align-items:center;gap:10px;border-radius:12px;padding:9px 12px;border:1px solid var(--line);background:var(--surface);font-size:13px;text-align:left;width:100%}
 .ppchip i{width:10px;height:10px;border-radius:50%;flex:none;background:#ff8a5b;box-shadow:0 0 10px #ff8a5b}
 .ppchip.eat i{background:#34d399;box-shadow:0 0 10px #34d399}
@@ -1290,10 +1303,103 @@ function viewToday(){
   return html;
 }
 
+/* ---------- challenges (computed from history; nothing extra is stored) ---------- */
+function chData(){
+  const L=SESS.slice().sort((a,b)=>a.date-b.date), n=L.length;
+  const real=s=>{const d=new Date(s.date);return !(d.getHours()===12&&d.getMinutes()===0&&d.getSeconds()===0)};
+  const hr=s=>new Date(s.date).getHours();
+  let ton=0,sets=0,maxTon=0,km=0,cmin=0,rir0=0,self=0,dbl=0,eights=0,hundred=0,devil=0,pal=0;
+  for(const s of L){const ld=sessLoad(s);ton+=ld.ton;sets+=ld.sets;maxTon=Math.max(maxTon,ld.ton);
+    const rt=Math.round(ld.ton); if(rt===6666) devil++; if(rt>=1000&&String(rt)===String(rt).split('').reverse().join('')) pal++;
+    for(const c of (s.cardio||[])){km+=+c.km||0;cmin+=+c.tmin||0}
+    for(const it of s.items)for(const x of it.sets){if(x.rir===0)rir0++;
+      if(!loadKind(it.exId)&&s.bw>0&&x.reps>0){if(x.kg>=s.bw)self++;if(x.kg>=2*s.bw)dbl++}
+      if(x.kg===88&&x.reps===8)eights++; if(x.kg===100&&x.reps===10)hundred++;}}
+  // weeks in a row with 2+ trainings, days in a row
+  const wk=t=>{const d=new Date(t);d.setHours(0,0,0,0);d.setDate(d.getDate()-((d.getDay()+6)%7));return d.getTime()};
+  const wc={};for(const s of L){const k=wk(s.date);wc[k]=(wc[k]||0)+1}
+  let wBest=0,wRun=0,prev=null;Object.keys(wc).map(Number).sort((a,b)=>a-b).forEach(k=>{if(wc[k]<2){wRun=0;prev=k;return}wRun=(prev!==null&&Math.round((k-prev)/6048e5)===1&&wRun)?wRun+1:1;prev=k;wBest=Math.max(wBest,wRun)});
+  const days=[...new Set(L.map(s=>isoDay(s.date)))].sort();let dBest=0,dRun=0,pd=null;
+  days.forEach(k=>{const t=new Date(k+'T12:00').getTime();dRun=(pd!==null&&Math.round((t-pd)/864e5)===1)?dRun+1:1;pd=t;dBest=Math.max(dBest,dRun)});
+  // weekends with Saturday AND Sunday
+  const we={};for(const s of L){const d=new Date(s.date),g=d.getDay();if(g===6||g===0){const k=wk(s.date);we[k]=(we[k]||0)|(g===6?1:2)}}
+  const weekends=Object.values(we).filter(v=>v===3).length;
+  // fasted trainings (Post Przerywany)
+  const fasts=PP?(PP.fasts||[]).concat(PP.cur?[{start:PP.cur.start,end:Date.now()}]:[]):[];
+  let fasted=0,beast=0;for(const s of L){const f=fasts.find(f=>s.date>=f.start&&s.date<=f.end);if(f){fasted++;if(s.date-f.start>=20*36e5)beast++}}
+  // full moon (synodic month from a known new moon)
+  const fullMoon=t=>{const ph=(((t-947182440000)/864e5)%29.530589+29.530589)%29.530589/29.530589;return ph>0.46&&ph<0.54};
+  const any=fn=>L.some(fn);
+  return {L,n,ton,sets,maxTon,km,cmin,rir0,self,dbl,eights,hundred,devil,pal,wBest,dBest,weekends,fasted,beast,real,hr,fullMoon,any};
+}
+function challenges(){
+  const D=chData(), {n,ton,km,cmin}=D, t=x=>x*1000;
+  const C=[];
+  const add=(cat,em,nm,d,cur,max,secret)=>C.push({cat,em,nm,d,cur:Math.min(cur,max),max,on:cur>=max,secret:!!secret});
+  // Regularność
+  [[1,'👟','Pierwszy krok','Zapisz pierwszy trening'],[10,'🔟','Dziesiątka','10 treningów'],[25,'🥉','Ćwierćwiecze','25 treningów'],[50,'🥈','Pół setki','50 treningów'],
+   [100,'🥇','Setka','100 treningów'],[250,'🎖️','Weteran','250 treningów'],[500,'🦾','Żelazny człowiek','500 treningów'],[1000,'👑','Legenda siłowni','1000 treningów. Siłownia powinna ci płacić.']]
+   .forEach(([m,e,a,b])=>add('Regularność',e,a,b,n,m));
+  add('Regularność','📅','Miesiąc bez wymówek','4 tygodnie z rzędu, min. 2 treningi w tygodniu',D.wBest,4);
+  add('Regularność','🗓️','Kwartał żelaza','12 tygodni z rzędu, min. 2 treningi w tygodniu',D.wBest,12);
+  add('Regularność','🏛️','Rok bez wymówek','52 tygodnie z rzędu, min. 2 treningi w tygodniu',D.wBest,52);
+  add('Regularność','🔥','Maniak','Trening 7 dni z rzędu',D.dBest,7);
+  add('Regularność','⚔️','Weekendowy wojownik','4 weekendy z treningiem w sobotę i niedzielę',D.weekends,4);
+  // Siła
+  [[0.6,'🚗','Maluch','Łączny tonaż: Fiat 126p (0,6 t)'],[6,'🐘','Słoń afrykański','Łączny tonaż: 6 t'],[40,'🚛','TIR','Łączny tonaż: 40 t'],
+   [150,'🐋','Płetwal błękitny','Łączny tonaż: 150 t — największe zwierzę świata'],[400,'✈️','Jumbo Jet','Łączny tonaż: Boeing 747 (400 t)'],[10100,'🗼','Wieża Eiffla','Łączny tonaż: 10 100 t. Serio?']]
+   .forEach(([m,e,a,b])=>add('Siła',e,a,b,Math.round(ton/100)/10,m));
+  add('Siła','📦','Przeprowadzka','5 t tonażu w jednym treningu',Math.round(D.maxTon/100)/10,5);
+  add('Siła','🏗️','Dźwig','10 t tonażu w jednym treningu',Math.round(D.maxTon/100)/10,10);
+  add('Siła','🧱','Tysiąc serii','1000 serii łącznie',D.sets,1000);
+  add('Siła','⛰️','Dziesięć tysięcy serii','10 000 serii łącznie',D.sets,10000);
+  add('Siła','💀','Do upadku','20 serii z RIR 0',D.rir0,20);
+  add('Siła','🪞','Podnieś samego siebie','Seria z ciężarem ≥ twojej masy ciała',D.self,1);
+  add('Siła','👯','Podwójny ty','Seria z ciężarem ≥ 2× masa ciała',D.dbl,1);
+  // Cardio
+  add('Cardio','🏃','Maraton na raty','42,195 km cardio łącznie',Math.round(km*10)/10,42.195);
+  add('Cardio','🚴','Setka kilometrów','100 km cardio łącznie',Math.round(km),100);
+  add('Cardio','🏔️','Gdańsk–Zakopane i z powrotem','1300 km cardio łącznie',Math.round(km),1300);
+  add('Cardio','💦','10 godzin potu','600 minut cardio',Math.round(cmin),600);
+  add('Cardio','🌊','Sto godzin potu','6000 minut cardio',Math.round(cmin),6000);
+  // Post Przerywany
+  add('Na czczo','🍽️','Na czczo','Trening w trakcie postu (Post Przerywany)',D.fasted,1);
+  add('Na czczo','🥩','Głodny wilk','10 treningów na czczo',D.fasted,10);
+  add('Na czczo','🐺','Bestia na czczo','Trening po minimum 20 h postu',D.beast,1);
+  // Odjechane
+  const on=fn=>D.any(fn)?1:0;
+  add('Odjechane','🐓','Ranny ptaszek','Trening zakończony między 4:00 a 6:00',on(s=>D.real(s)&&D.hr(s)>=4&&D.hr(s)<6),1,1);
+  add('Odjechane','🦉','Nocny marek','Trening zakończony między 23:00 a 3:00',on(s=>D.real(s)&&(D.hr(s)>=23||D.hr(s)<3)),1,1);
+  add('Odjechane','🎄','Wigilia na ławce','Trening 24 grudnia. Karp poczeka.',on(s=>{const d=new Date(s.date);return d.getMonth()===11&&d.getDate()===24}),1,1);
+  add('Odjechane','🍾','Kac? Jaki kac?','Trening 1 stycznia',on(s=>{const d=new Date(s.date);return d.getMonth()===0&&d.getDate()===1}),1,1);
+  add('Odjechane','🃏','To nie żart','Trening w Prima Aprilis',on(s=>{const d=new Date(s.date);return d.getMonth()===3&&d.getDate()===1}),1,1);
+  add('Odjechane','🖤','Piątek 13-go','Trening w pechowy piątek',on(s=>{const d=new Date(s.date);return d.getDay()===5&&d.getDate()===13}),1,1);
+  add('Odjechane','🐺','Wilkołak','Trening wieczorem w noc pełni księżyca',on(s=>D.real(s)&&D.hr(s)>=19&&D.fullMoon(s.date)),1,1);
+  add('Odjechane','⏱️','1-2-3-4','Trening zakończony dokładnie o 12:34',on(s=>{const d=new Date(s.date);return d.getHours()===12&&d.getMinutes()===34}),1,1);
+  add('Odjechane','🐌','Maratończyk siłowni','Trening trwający ponad 3 godziny',on(s=>(s.dur||0)>=3*36e5),1,1);
+  add('Odjechane','⚡','Speedrun','Min. 6 serii w mniej niż 15 minut',on(s=>s.dur&&s.dur<15*6e4&&sessLoad(s).sets>=6),1,1);
+  add('Odjechane','🎱','Same ósemki','Seria 88 kg × 8 powtórzeń',D.eights,1,1);
+  add('Odjechane','💯','Okrągła setka','Seria 100 kg × 10 powtórzeń',D.hundred,1,1);
+  add('Odjechane','😈','Szatański tonaż','Trening z tonażem dokładnie 6666 kg',D.devil,1,1);
+  add('Odjechane','🪞','Palindrom','Tonaż treningu czytany tak samo wspak (np. 12 321 kg)',D.pal,1,1);
+  return C;
+}
+function viewChallenges(){
+  const C=challenges(), done=C.filter(c=>c.on).length, cats=[...new Set(C.map(c=>c.cat))];
+  let h=`<div class="chsum"><div class="big">${done}<span class="muted" style="font-size:20px">/${C.length}</span></div><div class="muted" style="font-size:13px">zdobytych wyzwań. Liczą się same z historii — nic nie musisz włączać.${PP?'':' Wyzwania „Na czczo” odblokuje Post Przerywany.'}</div></div>`;
+  for(const cat of cats){const list=C.filter(c=>c.cat===cat);
+    h+=`<div class="chcat">${cat} · ${list.filter(c=>c.on).length}/${list.length}</div><div class="chg">`;
+    for(const c of list){const hide=c.secret&&!c.on;
+      h+=`<div class="cht${c.on?' on':''}">${c.on?'<span class="ok">✓</span>':''}<span class="em">${hide?'❓':c.em}</span><b>${hide?'Sekretne':esc(c.nm)}</b><small>${esc(c.d)}</small>${c.max>1&&!c.on?`<div class="pb"><i style="width:${Math.round(c.cur/c.max*100)}%"></i></div><small>${String(c.cur).replace('.',',')} / ${String(c.max).replace('.',',')}</small>`:''}</div>`}
+    h+=`</div>`}
+  return h;
+}
+
 function viewHistory(){
   if(!SESS.length) return `<h2>Historia</h2><div class="empty">Brak zapisanych treningów.<br>Zakończ pierwszy trening, a pojawi się tutaj razem z wersjami i ciężarami.</div>`;
-  let html=`<h2>Historia</h2><div class="seg" role="group"><button type="button" data-act="hview" data-v="list" aria-pressed="${ui.hview!=='rec'}">Treningi</button><button type="button" data-act="hview" data-v="rec" aria-pressed="${ui.hview==='rec'}">Regeneracja</button></div>`;
+  let html=`<h2>Historia</h2><div class="seg" role="group"><button type="button" data-act="hview" data-v="list" aria-pressed="${ui.hview!=='rec'}">Treningi</button><button type="button" data-act="hview" data-v="rec" aria-pressed="${ui.hview==='rec'}">Regeneracja</button><button type="button" data-act="hview" data-v="ch" aria-pressed="${ui.hview==='ch'}">Wyzwania</button></div>`;
   if(ui.hview==='rec') return html+viewRecovery();
+  if(ui.hview==='ch') return html+viewChallenges();
   const exIds=[...new Set(SESS.flatMap(s=>s.items.map(i=>i.exId)))];
   html+=`<details${ui.hchart?' open':''}><summary>Postępy ćwiczeń</summary><div style="display:flex;flex-direction:column;gap:14px;margin-top:10px">`;
   for(const id of exIds){
@@ -1400,6 +1506,9 @@ function viewSettings(){
   html+=`<div><button type="button" class="btn ghost" data-act="planNew">+ Nowy plan</button></div>
     <span class="muted" style="font-size:13px">Pod „⋯” zmienisz nazwę planu albo zrobisz kopię do edycji. Ćwiczeń w szablonach nie da się zmieniać. Kopia robi z szablonu własny plan do edycji, a cykle wersji i ciężary przechodzą razem z nim.</span></div>
 <!--SEG:set-->  <div class="field"><label class="label" for="bw">Masa ciała (kg)</label><input id="bw" inputmode="decimal" placeholder="np. 82" value="${S.settings.bw?fmt(S.settings.bw):''}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px"><span class="muted" style="font-size:13px">Opcjonalnie. Dla ćwiczeń z masą ciała apka pokaże obciążenie efektywne, np. 82 kg − 20 kg asysty = 62 kg. Każdy trening zapamiętuje masę z dnia, w którym go zapisałeś.</span></div>
+  <div class="field"><label class="label" for="beepVol">Głośność sygnału przerwy: <b id="beepVolTxt">${beepVol()}%</b></label><input id="beepVol" type="range" min="0" max="150" step="10" value="${beepVol()}" style="width:100%;accent-color:var(--accent)">
+    <div class="row" style="flex-wrap:wrap;gap:8px"><div class="seg" role="group" style="flex:1;min-width:200px"><button type="button" data-act="beepCh" data-v="alarm" aria-pressed="${S.settings.beepCh!=='media'}">Głośność alarmu</button><button type="button" data-act="beepCh" data-v="media" aria-pressed="${S.settings.beepCh==='media'}">Głośność multimediów</button></div><button type="button" class="btn ghost" data-act="beepTest">🔔 Test</button></div>
+    <span class="muted" style="font-size:13px">„Głośność alarmu” gra jak budzik — jest głośno nawet przy ściszonej muzyce. Powyżej 100% dźwięk jest dodatkowo wzmocniony. ${window.Android&&Android.tone?'':'<b>Zaktualizuj APK, żeby działał głośny sygnał.</b>'}</span></div>
   <div class="field"><span class="label">RIR przy seriach</span><div class="seg" role="group"><button type="button" data-act="rirOn" data-v="1" aria-pressed="${S.settings.rir!==false}">Pokazuj</button><button type="button" data-act="rirOn" data-v="0" aria-pressed="${S.settings.rir===false}">Ukryj</button></div><span class="muted" style="font-size:13px">Po odhaczeniu serii możesz dotknąć, ile powtórzeń zostało w zapasie (0 = do upadku). Nieobowiązkowe: bez wyboru nic się nie zapisuje.</span></div>
   <div class="field"><label class="label" for="inc">Minimalny przyrost ciężaru (kg)</label><input id="inc" inputmode="decimal" value="${fmt(S.settings.inc)}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;max-width:140px;font-size:16px"></div>
   <div class="field"><label class="label" for="every">Dodawaj ciężar co … treningów</label><div class="row"><input id="every" inputmode="numeric" value="${everyN()}" style="border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px;width:80px;font-size:16px"><span class="muted">treningów z danym ćwiczeniem</span></div><span class="muted" style="font-size:13px">Przy 4: ćwiczenia z cyklem HD›VC›HC›VD dostają przyrost przy każdym powrocie do wersji, a izolacje VC›VD co drugi raz. Przy 1: przyrost za każdym razem, czyli dosłownie jak w PDF i jak w StrongLifts. Przy 0: bez żadnego przyrostu. Działa dla wszystkich planów.</span></div>
@@ -1440,7 +1549,19 @@ function render(){
 
 /* ---------- rest timer ---------- */
 let T=null, tInt=null, actx=null;
-function beep(f){try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain();o.frequency.value=f;o.connect(g);g.connect(actx.destination);g.gain.setValueAtTime(.25,actx.currentTime);g.gain.exponentialRampToValueAtTime(.001,actx.currentTime+.35);o.start();o.stop(actx.currentTime+.36)}catch(e){}try{navigator.vibrate&&navigator.vibrate(200)}catch(e){}}
+/* Volume 0-150 %: native tone on the alarm (or media) stream when the APK supports it, Web Audio otherwise */
+function beepVol(){const v=S.settings.beepVol;return v==null?100:+v}
+function beep(f,ms){
+  ms=ms||420; const vol=beepVol()/100; if(vol<=0) return;
+  try{if(window.Android&&Android.tone){Android.tone(f,ms,vol,S.settings.beepCh!=='media');try{navigator.vibrate&&navigator.vibrate(200)}catch(e){}return}}catch(e){}
+  try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();if(actx.state==='suspended')actx.resume();
+    const o=actx.createOscillator(),g=actx.createGain(),c=actx.createDynamicsCompressor(),t=actx.currentTime;
+    o.type='square';o.frequency.value=f;o.connect(g);g.connect(c);c.connect(actx.destination);
+    g.gain.setValueAtTime(0.0001,t);g.gain.exponentialRampToValueAtTime(Math.min(1,0.6*vol),t+0.01);g.gain.setValueAtTime(Math.min(1,0.6*vol),t+ms/1000-0.08);g.gain.exponentialRampToValueAtTime(0.0001,t+ms/1000);
+    o.start(t);o.stop(t+ms/1000+0.02)}catch(e){}
+  try{navigator.vibrate&&navigator.vibrate(200)}catch(e){}}
+/* end of rest: three beeps so it cuts through gym music */
+function beepTriple(f){beep(f,260);setTimeout(()=>beep(f,260),380);setTimeout(()=>beep(f*1.25,520),760)}
 function startTimer(ver){
   const v=VERS[ver]; T={start:Date.now(),min:v.min,max:v.max,ver,b1:false,b2:false};
   try{actx=actx||new (window.AudioContext||window.webkitAudioContext)()}catch(e){}
@@ -1453,8 +1574,8 @@ function tick(){
   el.className='t'+(s>=T.max+30?' over':s>=T.min?' ready':'');
   $('#tInfo').textContent=`Przerwa ${T.ver}: ${VERS[T.ver].rest}`+(s>=T.min?' · możesz zaczynać':'');
   $('#tBar').style.width=Math.min(100,s/T.max*100)+'%';
-  if(s>=T.min&&!T.b1){T.b1=true;beep(880)}
-  if(s>=T.max&&!T.b2&&T.max>T.min){T.b2=true;beep(660)}
+  if(s>=T.min&&!T.b1){T.b1=true;beepTriple(880)}
+  if(s>=T.max&&!T.b2&&T.max>T.min){T.b2=true;beepTriple(660)}
 }
 $('#tStop').addEventListener('click',()=>{T=null;clearInterval(tInt);$('#timer').hidden=true});
 $('#tAdd').addEventListener('click',()=>{if(T){T.min+=30;T.max+=30;T.b1=false;T.b2=false;tick()}});
@@ -1555,6 +1676,9 @@ document.addEventListener('click',e=>{
     case 'dateEdit': ui.dateEdit=true; break;
     case 'goRecovery': tab='history'; ui={hview:'rec'}; render(); window.scrollTo(0,0); return;
     case 'hview': ui.hview=el.dataset.v; break;
+    case 'beepCh': S.settings.beepCh=el.dataset.v; persist(); break;
+    case 'beepTest': beepTriple(880); return;
+    case 'chTab': ui.chCat=el.dataset.v; break;
     case 'dateToday': DRAFT.date=null; ui.dateEdit=false; draftSave(); break;
     case 'vpick': ui.vpick=ui.vpick===i?null:i; break;
     case 'setVer': {const it=DRAFT.items[i], v=el.dataset.v, n=S.cycles[it.key]||0, L=it.cy.length, idx=it.cy.indexOf(v);
@@ -1659,6 +1783,7 @@ document.addEventListener('click',e=>{
   render();
 });
 document.addEventListener('input',e=>{
+  if(e.target.id==='beepVol'){S.settings.beepVol=+e.target.value;const tx=document.getElementById('beepVolTxt');if(tx)tx.textContent=e.target.value+'%';clearTimeout(e.target._h);e.target._h=setTimeout(()=>{persist();beep(880,300)},350);return}
   const t=e.target;
   if(t.dataset&&t.dataset.c!=null&&DRAFT&&DRAFT.cardio){const c=DRAFT.cardio[+t.dataset.c]; if(c){if(t.dataset.cf)c[t.dataset.cf]=t.value; if(t.dataset.cr)c[t.dataset.cr]=t.value; draftSave()}}
   if(t.dataset&&t.dataset.f&&DRAFT){let v=t.value; if(t.dataset.f==='kg'&&t.dataset.as==='1'){v=v.trim().replace(/^-/,''); if(v!==''&&num(v)!==0) v='-'+v}
