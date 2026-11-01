@@ -307,6 +307,43 @@ body.ct{padding-bottom:calc(270px + env(safe-area-inset-bottom,0px))}
 nav.tabs button{display:flex;flex-direction:column;align-items:center;gap:2px}
 nav.tabs svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
 @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+
+/* ---- visual refresh (default look): dark-first, lime accent, deeper cards, bigger numbers ---- */
+:root:not([data-look="modern"]){
+  --bg:#f3f4f6; --surface:#ffffff; --surface2:#e9ebf0; --fg:#101217; --muted:#6a7080; --line:#dfe2e9;
+  --accent:#5d8a00; --accent-fg:#ffffff; --hd:#e4480e; --hc:#c77a00; --vc:#0a8f83; --vd:#2d62e0; --ok:#3f8f16; --warn:#c77a00;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]):not([data-look="modern"]){
+  --bg:#0b0c10; --surface:#15171e; --surface2:#1f222b; --fg:#f3f5f9; --muted:#858b9c; --line:#262a35;
+  --accent:#c6f35a; --accent-fg:#0b0c10; --hd:#ff7a4d; --hc:#ffc247; --vc:#3fe0c5; --vd:#7fb0ff; --ok:#c6f35a; --warn:#ffc247; color-scheme:dark}}
+:root[data-theme="dark"]:not([data-look="modern"]){
+  --bg:#0b0c10; --surface:#15171e; --surface2:#1f222b; --fg:#f3f5f9; --muted:#858b9c; --line:#262a35;
+  --accent:#c6f35a; --accent-fg:#0b0c10; --hd:#ff7a4d; --hc:#ffc247; --vc:#3fe0c5; --vd:#7fb0ff; --ok:#c6f35a; --warn:#ffc247; color-scheme:dark}
+:root:not([data-look="modern"]) body{background:var(--bg)}
+:root:not([data-look="modern"]) header.top{background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom-color:transparent}
+:root:not([data-look="modern"]) .brand{font-size:30px}
+:root:not([data-look="modern"]) .ex{border-radius:18px;padding:16px;border-color:transparent;box-shadow:0 10px 30px -14px rgba(0,0,0,.45)}
+:root:not([data-look="modern"]) .ex-name{font-size:19px;font-weight:800;letter-spacing:-.01em}
+:root:not([data-look="modern"]) .ver{border-radius:14px;font-size:36px}
+:root:not([data-look="modern"]) .target > div{border-radius:12px;background:var(--surface2)}
+:root:not([data-look="modern"]) .target .goal .v{color:var(--accent)}
+:root:not([data-look="modern"]) .inp input{background:var(--bg);border-color:transparent;border-radius:12px;font-size:18px;font-weight:700}
+:root:not([data-look="modern"]) .inp input:focus{border-color:var(--accent);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
+:root:not([data-look="modern"]) .set.done .inp input{background:color-mix(in srgb,var(--ok) 12%,var(--bg));border-color:transparent}
+:root:not([data-look="modern"]) .tick{border-radius:12px;border-color:transparent;background:var(--surface2)}
+:root:not([data-look="modern"]) .tick[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-fg)}
+:root:not([data-look="modern"]) .btn{border-radius:14px;font-weight:800;letter-spacing:.01em}
+:root:not([data-look="modern"]) .btn.wide{padding:16px}
+:root:not([data-look="modern"]) .chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+:root:not([data-look="modern"]) .day.next{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+:root:not([data-look="modern"]) .day.done{background:color-mix(in srgb,var(--accent) 20%,var(--surface));color:var(--fg)}
+:root:not([data-look="modern"]) nav.tabs{background:var(--surface);border-top:1px solid var(--line)}
+:root:not([data-look="modern"]) nav.tabs button{font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+:root:not([data-look="modern"]) nav.tabs button[aria-current="page"]{color:var(--accent);box-shadow:inset 0 3px 0 var(--accent)}
+:root:not([data-look="modern"]) .sess,:root:not([data-look="modern"]) .notice,:root:not([data-look="modern"]) details{border-color:transparent;border-radius:16px}
+:root:not([data-look="modern"]) .seg{border-radius:14px}
+:root:not([data-look="modern"]) .mchip{border-radius:999px}
+:root:not([data-look="modern"]) .ready{border-radius:16px;border-color:transparent}
 </style>
 
 <div class="wrap">
