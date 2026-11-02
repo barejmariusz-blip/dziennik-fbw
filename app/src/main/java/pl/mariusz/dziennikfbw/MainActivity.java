@@ -212,6 +212,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void publish(String json) {
             getSharedPreferences(ShareProvider.PREFS, MODE_PRIVATE).edit().putString("share", json).apply();
+            GymWidget.refresh(MainActivity.this);
         }
 
         /** Post Przerywany snapshot, "" when the app is missing. */

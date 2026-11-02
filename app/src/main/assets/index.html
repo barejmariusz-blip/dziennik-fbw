@@ -2042,6 +2042,9 @@ function ppPublish(){
   try{const p=plan();
     Android.publish(JSON.stringify({app:'fbw',v:1,at:Date.now(),bw:Number(S.settings.bw)||null,bwAt:S.settings.bwAt||null,
       next:{tr:nextTr(),plan:p.name},
+      ch:(S.chal||[]).map(a=>{const st=chStats(a),c=st.c,d=Math.min(st.today,st.N),t=chT(c,a,d),v=+(a.log||{})[d]||0;
+        return {em:c.em,n:c.n,day:isoDay(Date.now()),done:c.k==='daily'?(t>0&&v>=t):st.done,
+          txt:c.k==='daily'?(t?chFmt(c,t)+' · dzień '+d+'/'+st.N:'odpoczynek · dzień '+d+'/'+st.N):chFmt(c,Math.round(st.sum*10)/10)+' / '+chFmt(c,c.total)}}),
       sessions:SESS.slice(-120).map(x=>({date:x.date,tr:x.tr,plan:(allPlans().find(q=>q.id===x.plan)||{}).name||'',dur:x.dur||null,kcal:sessKcal(x),noPlan:!!x.noPlan}))}));
   }catch(e){}
 }

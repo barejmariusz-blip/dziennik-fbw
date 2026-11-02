@@ -36,6 +36,18 @@
         </activity>
 
         <receiver
+            android:name=".GymWidget"
+            android:exported="false"
+            android:label="Dziennik FBW">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_gym_info" />
+        </receiver>
+
+        <receiver
             android:name=".RestAlarm"
             android:exported="false" />
 
