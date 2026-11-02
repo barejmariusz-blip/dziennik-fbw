@@ -1618,10 +1618,15 @@ function beep(f,ms){
   try{navigator.vibrate&&navigator.vibrate(200)}catch(e){}}
 /* end of rest: three beeps so it cuts through gym music */
 function beepTriple(f){beep(f,260);setTimeout(()=>beep(f,260),380);setTimeout(()=>beep(f*1.25,520),760)}
+/* native rest alarm: beeps and counts down in the notification bar even with the screen off */
+function restNative(){try{if(!window.Android||!Android.restStart)return; if(!T){Android.restStop();return}
+  Android.restStart(T.start,T.min,T.max,'Przerwa '+T.ver+': '+VERS[T.ver].rest,beepVol()/100,S.settings.beepCh!=='media')}catch(e){}}
+function restOff(){T=null;clearInterval(tInt);$('#timer').hidden=true;restNative()}
 function startTimer(ver){
   const v=VERS[ver]; T={start:Date.now(),min:v.min,max:v.max,ver,b1:false,b2:false};
   try{actx=actx||new (window.AudioContext||window.webkitAudioContext)()}catch(e){}
-  $('#timer').hidden=false; clearInterval(tInt); tInt=setInterval(tick,250); tick();
+  $('#timer').hidden=false; clearInterval(tInt); tInt=setInterval(tick,250); tick(); restNative();
+  if(!S.settings.notifAsked&&window.Android&&Android.notifyState&&Android.notifyState()==='ask'){S.settings.notifAsked=true;lsSave();Android.askNotify()}
 }
 function tick(){
   if(!T) return;
@@ -1630,11 +1635,13 @@ function tick(){
   el.className='t'+(s>=T.max+30?' over':s>=T.min?' ready':'');
   $('#tInfo').textContent=`Przerwa ${T.ver}: ${VERS[T.ver].rest}`+(s>=T.min?' · możesz zaczynać':'');
   $('#tBar').style.width=Math.min(100,s/T.max*100)+'%';
-  if(s>=T.min&&!T.b1){T.b1=true;beepTriple(880)}
-  if(s>=T.max&&!T.b2&&T.max>T.min){T.b2=true;beepTriple(660)}
+  // a beep that is more than 3 s late was already played by the system alarm while the app was in the background
+  const late=k=>Date.now()-(T.start+k*1000)>3000;
+  if(s>=T.min&&!T.b1){T.b1=true;if(!late(T.min))beepTriple(880)}
+  if(s>=T.max&&!T.b2&&T.max>T.min){T.b2=true;if(!late(T.max))beepTriple(660)}
 }
-$('#tStop').addEventListener('click',()=>{T=null;clearInterval(tInt);$('#timer').hidden=true});
-$('#tAdd').addEventListener('click',()=>{if(T){T.min+=30;T.max+=30;T.b1=false;T.b2=false;tick()}});
+$('#tStop').addEventListener('click',restOff);
+$('#tAdd').addEventListener('click',()=>{if(T){T.min+=30;T.max+=30;T.b1=false;T.b2=false;tick();restNative()}});
 let wake=null;
 async function keepAwake(){if(window.Android&&window.Android.keepAwake){try{Android.keepAwake(true)}catch(e){}return}try{if(!wake&&navigator.wakeLock){wake=await navigator.wakeLock.request('screen');wake.addEventListener('release',()=>wake=null)}}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&draftHasData())keepAwake()});
@@ -1706,6 +1713,7 @@ function finish(){
   S.seqPos+=step;}
   SESS.push(sess); SESS.sort((x,y)=>x.date-y.date);
   persist(); cloudDo(()=>prof().collection('sessions').doc(sess.id).set(sess));
+  if(T) restOff();
   DRAFT=null; draftSave(); ui={}; try{wake&&wake.release()}catch(e){} try{window.Android&&Android.keepAwake&&Android.keepAwake(false)}catch(e){}
   ui.summary=sess.id; ensureDraft(); render(); window.scrollTo(0,0);
 }
@@ -1725,7 +1733,7 @@ document.addEventListener('click',e=>{
     case 'wPause': if(DRAFT.pausedAt){DRAFT.pausedMs=(DRAFT.pausedMs||0)+(Date.now()-DRAFT.pausedAt);DRAFT.pausedAt=null}else DRAFT.pausedAt=Date.now(); draftSave(); break;
     case 'wResetAsk': ui.wResetAsk=true; break;
     case 'wResetNo': ui.wResetAsk=false; break;
-    case 'wReset': {const t=DRAFT.tr; buildDraft(t); ui.wResetAsk=false; T=null; clearInterval(tInt); $('#timer').hidden=true; draftSave(); toast('Trening '+t+' wyzerowany'); break}
+    case 'wReset': {const t=DRAFT.tr; buildDraft(t); ui.wResetAsk=false; restOff(); draftSave(); toast('Trening '+t+' wyzerowany'); break}
     case 'lmode': {const it=DRAFT.items[i], v=el.dataset.v; if(v==='assist') S.loadMode[it.exId]='assist'; else delete S.loadMode[it.exId];
       for(const st of it.sets){const n=num(st.kg); if(!isNaN(n)&&n!==0&&((v==='assist')!==(n<0))) st.kg=fmt(-n)}
       persist(); draftSave(); break}
@@ -1886,7 +1894,7 @@ function cPhases(c){const ph=[],W=+c.work||0,R=+c.rest||0,N=+c.rounds||0;
   if(c.mode!=='LISS') for(let r=1;r<=N;r++){ph.push({k:'work',sec:W,l:c.wl||'PRACA',r});if(r<N&&R>0)ph.push({k:'rest',sec:R,l:c.rl||'ODPOCZYNEK',r})}
   return ph.filter(x=>x.sec>0)}
 function cStart(ci){const c=DRAFT.cardio[ci], ph=cPhases(c); if(!ph.length){toast('Ustaw czas albo liczbę rund');return}
-  T=null; clearInterval(tInt); $('#timer').hidden=true;
+  restOff();
   try{actx=actx||new (window.AudioContext||window.webkitAudioContext)()}catch(e){}
   CT={ci,ph,i:0,pe:0,tot:0,last:Date.now(),paused:false};
   keepAwake(); beep(880); document.body.classList.add('ct'); clearInterval(ctInt); ctInt=setInterval(cTick,200); cTick(); render()}

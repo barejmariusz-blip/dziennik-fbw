@@ -6,9 +6,6 @@ import android.content.ClipboardManager;
 import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
-import android.media.AudioAttributes;
-import android.media.AudioFormat;
-import android.media.AudioTrack;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -32,6 +29,9 @@ import java.nio.charset.StandardCharsets;
 /** Hosts the training log (assets/index.html) in a WebView; data lives in the WebView's localStorage. */
 public class MainActivity extends Activity {
 
+    /** True while the app is on screen — then the page beeps itself and the rest alarm stays quiet. */
+    static volatile boolean visible;
+
     private static final int FILE_REQ = 42;
     private WebView web;
     private ValueCallback<Uri[]> fileCallback;
@@ -39,6 +39,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onCreate(Bundle state) {
         super.onCreate(state);
+        RestAlarm.channels(this);
         web = new WebView(this);
         setContentView(web);
 
@@ -114,12 +115,14 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        visible = true;
         if (web != null) web.evaluateJavascript("window.onNativeResume&&window.onNativeResume()", null);
     }
 
     @Override
     protected void onPause() {
         super.onPause();
+        visible = false;
         CookieManager.getInstance().flush();
     }
 
@@ -164,36 +167,45 @@ public class MainActivity extends Activity {
          * Rest-timer beep. alarm=true plays on the alarm stream (loud like an alarm clock,
          * independent of music volume). vol 0..1.5 — above 1 the tone is soft-clipped for extra loudness.
          */
+        /** Rest-timer beep (see Beeper). */
         @JavascriptInterface
         public void tone(final int freq, final int ms, final float vol, final boolean alarm) {
-            new Thread(() -> {
-                AudioTrack t = null;
-                try {
-                    int rate = 44100, n = Math.max(1, rate * Math.max(60, Math.min(ms, 3000)) / 1000);
-                    short[] buf = new short[n];
-                    float gain = Math.max(0f, Math.min(vol, 1.5f));
-                    int fade = rate / 100;
-                    for (int i = 0; i < n; i++) {
-                        double ph = 2 * Math.PI * freq * i / rate;
-                        double v = Math.sin(ph) + 0.35 * Math.sin(3 * ph) + 0.2 * Math.sin(5 * ph); // brighter, cuts through noise
-                        v = Math.tanh(v * gain * 1.6) / Math.tanh(1.6);                          // soft clip, no harsh distortion
-                        double env = Math.min(1.0, Math.min(i, n - 1 - i) / (double) fade);
-                        buf[i] = (short) (v * env * 32000);
-                    }
-                    AudioAttributes aa = new AudioAttributes.Builder()
-                            .setUsage(alarm ? AudioAttributes.USAGE_ALARM : AudioAttributes.USAGE_MEDIA)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION).build();
-                    AudioFormat af = new AudioFormat.Builder().setSampleRate(rate)
-                            .setEncoding(AudioFormat.ENCODING_PCM_16BIT).setChannelMask(AudioFormat.CHANNEL_OUT_MONO).build();
-                    t = new AudioTrack(aa, af, n * 2, AudioTrack.MODE_STATIC, android.media.AudioManager.AUDIO_SESSION_ID_GENERATE);
-                    t.write(buf, 0, n);
-                    t.play();
-                    Thread.sleep(ms + 80L);
-                } catch (Exception ignored) {
-                } finally {
-                    if (t != null) try { t.release(); } catch (Exception ignored) { }
+            new Thread(() -> Beeper.play(freq, ms, vol, alarm)).start();
+        }
+
+        /** Rest timer that also works with the screen off: system alarm + notification countdown. */
+        @JavascriptInterface
+        public void restStart(double startMs, int minS, int maxS, String label, float vol, boolean alarm) {
+            RestAlarm.start(MainActivity.this, (long) startMs, minS, maxS, label, vol, alarm);
+        }
+
+        @JavascriptInterface
+        public void restStop() { RestAlarm.stop(MainActivity.this); }
+
+        /** "granted" | "denied" | "ask" */
+        @JavascriptInterface
+        public String notifyState() {
+            android.app.NotificationManager nm = (android.app.NotificationManager) getSystemService(NOTIFICATION_SERVICE);
+            if (nm != null && !nm.areNotificationsEnabled()) {
+                if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED) return "ask";
+                return "denied";
+            }
+            return "granted";
+        }
+
+        @JavascriptInterface
+        public void askNotify() {
+            runOnUiThread(() -> {
+                if (Build.VERSION.SDK_INT >= 33 && checkSelfPermission("android.permission.POST_NOTIFICATIONS") != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                    requestPermissions(new String[]{"android.permission.POST_NOTIFICATIONS"}, 44);
+                } else {
+                    try {
+                        Intent i = new Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS);
+                        i.putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, getPackageName());
+                        startActivity(i);
+                    } catch (Exception ignored) { }
                 }
-            }).start();
+            });
         }
 
         /** Snapshot that Post Przerywany reads through ShareProvider. */
