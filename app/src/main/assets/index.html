@@ -54,6 +54,12 @@ h2{font-family:var(--display);font-weight:800;text-transform:uppercase;font-size
 
 /* next-training hero */
 .hero{display:flex;flex-direction:column;gap:12px}
+.chday{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.chrow{display:flex;gap:12px;align-items:flex-start;border-top:1px solid var(--line);padding-top:10px}
+.chrow .em{font-size:28px;line-height:1}
+.chok{color:var(--accent);font-weight:800;font-size:13px}
+.chbar{height:6px;border-radius:3px;background:var(--surface2);overflow:hidden;margin-top:6px}
+.chbar i{display:block;height:100%;background:var(--accent)}
 .chsum{display:flex;align-items:center;gap:14px;margin:12px 0}
 .chsum .big{font-family:var(--display);font-weight:800;font-size:44px;line-height:1}
 .chg{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:8px}
@@ -1140,6 +1146,26 @@ function applyLook(){
 }
 
 /* ---------- views ---------- */
+/* estimated one-rep max (Epley). Sets above 12 reps are skipped — the estimate gets unreliable there. */
+function e1rm(kg,reps){if(!(kg>0)||!(reps>=1)||reps>12)return null;return reps===1?kg:kg*(1+reps/30)}
+function e1rmSeries(exId){const out=[];
+  for(const s of SESS)for(const it of s.items)if(it.exId===exId){let b=null;
+    for(const x of it.sets){const kg=loadKind(exId)?effKg(exId,x.kg,s.bw||null):x.kg;const v=e1rm(kg,x.reps);if(v!==null&&(b===null||v>b))b=v}
+    if(b!==null)out.push({t:s.date,v:b})}
+  return out.sort((a,b)=>a.t-b.t)}
+function e1rmInfo(exId){const a=e1rmSeries(exId);if(!a.length)return null;
+  const last=a[a.length-1].v,best=Math.max(...a.map(p=>p.v)),old=a.filter(p=>p.t<=a[a.length-1].t-56*864e5).pop();
+  return {last,best,chg:old?(last-old.v)/old.v*100:null,n:a.length}}
+function e1rmChart(exId){const a=e1rmSeries(exId);if(a.length<2)return '';
+  const W=320,H=130,L=40,R=10,T=12,B=22;let t0=a[0].t,t1=a[a.length-1].t;if(t1===t0){t0-=864e5;t1+=864e5}
+  let y0=Math.min(...a.map(p=>p.v)),y1=Math.max(...a.map(p=>p.v));const pd=Math.max(2.5,(y1-y0)*.15);y0-=pd;y1+=pd;
+  const X=t=>L+(t-t0)/(t1-t0)*(W-L-R),Y=v=>T+(1-(v-y0)/(y1-y0))*(H-T-B),best=Math.max(...a.map(p=>p.v));
+  let g=[0,.5,1].map(f=>{const v=y0+(y1-y0)*f;return `<line x1="${L}" x2="${W-R}" y1="${Y(v).toFixed(1)}" y2="${Y(v).toFixed(1)}" style="stroke:var(--line)"/><text x="${L-5}" y="${(Y(v)+3.5).toFixed(1)}" text-anchor="end" font-size="10" style="fill:var(--muted)">${Math.round(v)}</text>`}).join('');
+  const pts=a.map(p=>X(p.t).toFixed(1)+','+Y(p.v).toFixed(1)).join(' ');
+  g+=`<polygon points="${X(a[0].t).toFixed(1)},${H-B} ${pts} ${X(a[a.length-1].t).toFixed(1)},${H-B}" style="fill:var(--accent);opacity:.12"/><polyline fill="none" style="stroke:var(--accent)" stroke-width="2.5" stroke-linejoin="round" points="${pts}"/>`;
+  for(const p of a)g+=`<circle cx="${X(p.t).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="${p.v===best?4.5:2.5}" style="fill:${p.v===best?'var(--accent)':'var(--fg)'};opacity:${p.v===best?1:.5}"/>`;
+  g+=`<text x="${L}" y="${H-5}" font-size="10" style="fill:var(--muted)">${dstr(a[0].t)}</text><text x="${W-R}" y="${H-5}" text-anchor="end" font-size="10" style="fill:var(--muted)">${dstr(a[a.length-1].t)}</text>`;
+  return `<div class="chart"><div class="label" style="margin-bottom:4px">Szacowany max (e1RM) — wszystkie wersje razem</div><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Wykres szacowanego maksimum">${g}</svg><span class="muted" style="font-size:12px">Z najlepszej serii treningu, wzór Epleya: ciężar × (1 + powt./30). Serie powyżej 12 powtórzeń pomijam. Dzięki temu widać realny wzrost siły, nawet gdy zmieniasz wersje i zakresy.</span></div>`}
 function chartSVG(exId,sel){
   const VS=['HD','VC','HC','VD','LP'], series={};
   for(const s of SESS)for(const it of s.items)if(it.exId===exId){const m=Math.max(...it.sets.map(x=>isNaN(x.kg)?-Infinity:x.kg));if(isFinite(m))(series[it.ver]=series[it.ver]||[]).push({t:s.date,kg:m})}
@@ -1225,6 +1251,7 @@ function viewToday(){
       ${(ss.cardio||[]).length?`<div style="font-size:13px">${ss.cardio.map(c=>'🏃 '+esc(cDesc(c))).join('<br>')}</div>`:''}
       <div style="font-size:13px">Spalone (szacunek): <b>~${sessKcal(ss)} kcal</b>${S.settings.bw?'':' <span class="muted">· przyjęto 80 kg, wpisz masę ciała w zakładce Plan</span>'}</div>
       <span class="muted" style="font-size:13px">Następny trening: <b>${esc(nextTr())}</b></span></section>`;}}
+  chAutoClose(); html+=chToday();
   html+=`<section class="hero" aria-label="Dzisiejszy trening">
     <div class="hero-top"><div><div class="label">${isNext?'Kolejny trening':'Wybrany trening'} · ${esc(p.name)}</div>
       <div class="trname">${esc(tr)}</div></div>
@@ -1356,6 +1383,10 @@ function challenges(){
   add('Siła','💀','Do upadku','20 serii z RIR 0',D.rir0,20);
   add('Siła','🪞','Podnieś samego siebie','Seria z ciężarem ≥ twojej masy ciała',D.self,1);
   add('Siła','👯','Podwójny ty','Seria z ciężarem ≥ 2× masa ciała',D.dbl,1);
+  const cd=(S.chalDone||[]).filter(x=>x.ok);
+  add('Regularność','🎯','Słowny','Ukończ pierwsze wyzwanie z biblioteki',cd.length,1);
+  add('Regularność','🏅','Kolekcjoner','Ukończ 5 wyzwań z biblioteki',cd.length,5);
+  add('Odjechane','🤪','Szaleniec','Ukończ wyzwanie z kategorii „Odjechane”',cd.filter(x=>(chDef(x.id)||{}).cat==='Odjechane').length,1,1);
   // Cardio
   add('Cardio','🏃','Maraton na raty','42,195 km cardio łącznie',Math.round(km*10)/10,42.195);
   add('Cardio','🚴','Setka kilometrów','100 km cardio łącznie',Math.round(km),100);
@@ -1451,11 +1482,81 @@ function viewChallenges(){
   return h;
 }
 
+/* ---------- challenge programs: run alongside (and independent of) the active plan ---------- */
+const doy=t=>{const d=new Date(t);return Math.round((new Date(d.getFullYear(),d.getMonth(),d.getDate())-new Date(d.getFullYear(),0,0))/864e5)};
+const lin=(d,n,a,b)=>Math.round(a+(d-1)*(b-a)/Math.max(1,n-1));
+const rest4=(d,v)=>d%4===0?0:v;
+const MWF=d=>[1,3,5].includes(((d-1)%7)+1);
+const CHL=[
+ {id:'push30',cat:'Klasyki',em:'💪',n:'30 dni pompek',d:'Od 10 do 100 pompek dziennie, możesz rozbić na serie. Co 4. dzień wolne.',days:30,u:'pompek',k:'daily',t:d=>rest4(d,lin(d,30,10,100))},
+ {id:'squat30',cat:'Klasyki',em:'🦵',n:'30 dni przysiadów',d:'Od 50 do 250 przysiadów dziennie. Co 4. dzień wolne.',days:30,u:'przysiadów',k:'daily',t:d=>rest4(d,lin(d,30,50,250))},
+ {id:'abs30',cat:'Klasyki',em:'🔥',n:'30 dni brzucha',d:'Spięcia brzucha od 20 do 150 dziennie. Co 4. dzień wolne.',days:30,u:'spięć',k:'daily',t:d=>rest4(d,lin(d,30,20,150))},
+ {id:'plank30',cat:'Klasyki',em:'🪵',n:'Plank 5 minut',d:'Od 20 s do 5 minut deski w 30 dni. Możesz w kilku podejściach.',days:30,u:'s',k:'daily',t:d=>rest4(d,Math.round(lin(d,30,20,300)/5)*5)},
+ {id:'hang30',cat:'Klasyki',em:'🐒',n:'Martwy wis 2 minuty',d:'Zwis na drążku od 15 s do 2 minut. Chwyt jak imadło.',days:30,u:'s',k:'daily',t:d=>rest4(d,Math.round(lin(d,30,15,120)/5)*5)},
+ {id:'wall30',cat:'Klasyki',em:'🪑',n:'Krzesełko 5 minut',d:'Siad przy ścianie od 30 s do 5 minut łącznie.',days:30,u:'s',k:'daily',t:d=>rest4(d,Math.round(lin(d,30,30,300)/5)*5)},
+ {id:'push100',cat:'Programy',em:'💯',n:'100 pompek w 6 tygodni',d:'3 sesje w tygodniu, rośnie suma powtórzeń. Ostatniego dnia: 100 pompek w jednej serii.',days:42,u:'pompek',k:'daily',t:d=>d===42?100:MWF(d)?Math.round(30+(Math.floor((d-1)/7)*3+[1,3,5].indexOf(((d-1)%7)+1))*120/17):0,last:'w jednej serii'},
+ {id:'pull20',cat:'Programy',em:'🧗',n:'20 podciągnięć w 6 tygodni',d:'3 sesje w tygodniu. Ostatniego dnia: 20 podciągnięć w jednej serii.',days:42,u:'podciągnięć',k:'daily',t:d=>d===42?20:MWF(d)?Math.round(12+(Math.floor((d-1)/7)*3+[1,3,5].indexOf(((d-1)%7)+1))*58/17):0,last:'w jednej serii'},
+ {id:'burpee1000',cat:'Na sumę',em:'🐸',n:'1000 burpees w miesiąc',d:'Dowolnie rozłożone. Średnio 34 dziennie.',days:30,u:'burpees',k:'total',total:1000},
+ {id:'marathon7',cat:'Na sumę',em:'🏃',n:'Maraton w tydzień',d:'42,195 km biegu w 7 dni — w dowolnych kawałkach.',days:7,u:'km',k:'total',total:42.195},
+ {id:'everest',cat:'Na sumę',em:'🏔️',n:'Schody na Everest',d:'8848 m przewyższenia na stepperze lub schodach w 30 dni. Jedno piętro to ok. 3 m.',days:30,u:'m',k:'total',total:8848},
+ {id:'pushyear',cat:'Odjechane',em:'📆',n:'Pompka = dzień roku',d:'Codziennie tyle pompek, który jest dzień roku. 1 stycznia: 1. 31 grudnia: 365. Trwa do końca roku.',days:t=>{const d=new Date(t);return Math.round((new Date(d.getFullYear(),11,31)-new Date(d.getFullYear(),d.getMonth(),d.getDate()))/864e5)+1},u:'pompek',k:'daily',t:(d,date)=>doy(date)},
+ {id:'plankdate',cat:'Odjechane',em:'🗓️',n:'Plank równy dacie',d:'Tyle minut deski, który jest dzień miesiąca. 30-go — pół godziny. Do końca miesiąca.',days:t=>{const d=new Date(t);return new Date(d.getFullYear(),d.getMonth()+1,0).getDate()-d.getDate()+1},u:'s',k:'daily',t:(d,date)=>new Date(date).getDate()*60},
+ {id:'advent',cat:'Odjechane',em:'🎄',n:'Adwentowe burpees',d:'24 dni. Dzień 1: 4 burpees, dzień 24: 96. Prezent dla siebie.',days:24,u:'burpees',k:'daily',t:d=>d*4},
+ {id:'squat1000',cat:'Odjechane',em:'🤯',n:'1000 przysiadów w jeden dzień',d:'Od rana do wieczora. Jutro schody będą Twoim wrogiem.',days:1,u:'przysiadów',k:'total',total:1000},
+ {id:'deck',cat:'Odjechane',em:'🃏',n:'Talia kart',d:'Codziennie 52 „karty”: 4 kolory = pompki, przysiady, brzuszki, burpees. Suma 380 powtórzeń dziennie przez tydzień.',days:7,u:'powt.',k:'daily',t:()=>380},
+];
+const chDef=id=>CHL.find(c=>c.id===id);
+const chDays=(c,a)=>typeof c.days==='function'?c.days(new Date(a.start+'T12:00').getTime()):c.days;
+const chDayIdx=a=>Math.floor((new Date(isoDay(Date.now())+'T12:00')-new Date(a.start+'T12:00'))/864e5)+1;
+const chDate=(a,d)=>new Date(a.start+'T12:00').getTime()+(d-1)*864e5;
+const chT=(c,a,d)=>c.k==='daily'?c.t(d,chDate(a,d)):0;
+const chFmt=(c,v)=>c.u==='s'?(v>=60?Math.floor(v/60)+' min'+(v%60?' '+v%60+' s':''):v+' s'):(String(Math.round(v*1000)/1000).replace('.',',')+' '+c.u);
+function chStats(a){const c=chDef(a.id),N=chDays(c,a),today=Math.min(chDayIdx(a),N+1);
+  if(c.k==='total'){const sum=Object.values(a.log||{}).reduce((x,y)=>x+(+y||0),0);return {c,N,today,sum,done:sum>=c.total,over:today>N,pct:Math.min(100,sum/c.total*100)}}
+  let need=0,ok=0,miss=0;for(let d=1;d<=Math.min(N,today);d++){const t=chT(c,a,d);if(!t)continue;need++;const v=+(a.log||{})[d]||0;if(v>=t)ok++;else if(d<today)miss++}
+  let tot=0;for(let d=1;d<=N;d++)if(chT(c,a,d))tot++;
+  return {c,N,today,ok,miss,tot,done:ok>=tot,over:today>N,pct:tot?ok/tot*100:0}}
+function chFinish(i,quit){const a=S.chal[i],st=chStats(a);(S.chalDone=S.chalDone||[]).push({id:a.id,start:a.start,end:isoDay(Date.now()),ok:!quit&&st.done});S.chal.splice(i,1);persist()}
+function chAutoClose(){let ch=false;for(let i=(S.chal||[]).length-1;i>=0;i--){const st=chStats(S.chal[i]);if(st.done||st.over){chFinish(i,false);ch=true;toast(st.done?'🏆 Wyzwanie ukończone: '+st.c.n:'Wyzwanie „'+st.c.n+'” dobiegło końca')}}return ch}
+function chToday(){
+  if(!(S.chal||[]).length) return '';
+  let h=`<section class="chday"><div class="row" style="justify-content:space-between"><div class="label">Wyzwania · dziś</div><button type="button" class="link" data-act="chOpen">Biblioteka →</button></div>`;
+  S.chal.forEach((a,i)=>{const st=chStats(a),c=st.c,d=st.today;
+    h+=`<div class="chrow"><span class="em">${c.em}</span><div style="flex:1;min-width:0"><b>${esc(c.n)}</b><div class="muted" style="font-size:12px">Dzień ${Math.min(d,st.N)}/${st.N}`;
+    if(c.k==='daily'){const t=chT(c,a,d),v=+(a.log||{})[d]||0;
+      h+=` · zaliczone ${st.ok}/${st.tot}${st.miss?` · opuszczone ${st.miss}`:''}</div>`;
+      if(!t) h+=`<div style="margin-top:4px">😴 Dziś odpoczynek</div>`;
+      else h+=`<div class="row" style="margin-top:6px;gap:6px;flex-wrap:wrap"><span style="font-weight:700">${chFmt(c,t)}${d===st.N&&c.last?' '+c.last:''}</span>${v>=t?`<span class="chok">✓ Zrobione</span><button type="button" class="link" data-act="chUndo" data-i="${i}">cofnij</button>`:`<button type="button" class="sbtn acc" data-act="chDo" data-i="${i}">✓ Zrobione</button>${v?`<span class="muted" style="font-size:12px">masz ${chFmt(c,v)}</span>`:''}<input id="chv${i}" inputmode="decimal" placeholder="ile?" aria-label="Ile zrobiłeś" style="width:70px;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px"><button type="button" class="sbtn" data-act="chAdd" data-i="${i}">+ dodaj</button>`}</div>`;
+    } else {
+      const left=Math.max(0,c.total-st.sum),dl=Math.max(1,st.N-d+1);
+      h+=` · ${chFmt(c,Math.round(st.sum*100)/100)} z ${chFmt(c,c.total)}</div><div class="chbar"><i style="width:${st.pct}%"></i></div>
+        <div class="row" style="margin-top:6px;gap:6px;flex-wrap:wrap"><span class="muted" style="font-size:12px">zostało ${chFmt(c,Math.round(left*100)/100)} · ok. ${chFmt(c,Math.ceil(left/dl*10)/10)}/dzień</span><input id="chv${i}" inputmode="decimal" placeholder="${c.u}" aria-label="Ile dodać" style="width:70px;border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:6px"><button type="button" class="sbtn acc" data-act="chAdd" data-i="${i}">+ dodaj</button></div>`;
+    }
+    h+=`</div></div>`});
+  return h+`</section>`;
+}
+function viewChLibrary(){
+  let h=`<div class="chcat">Twoje wyzwania</div>`;
+  if(!(S.chal||[]).length) h+=`<div class="muted" style="font-size:13px;margin-top:6px">Brak aktywnych. Wyzwania działają obok planu — nie zmieniają go i nie przesuwają cykli.</div>`;
+  else S.chal.forEach((a,i)=>{const st=chStats(a);
+    h+=`<div class="cht on" style="margin-top:8px;flex-direction:row;align-items:center;gap:12px"><span class="em" style="font-size:28px">${st.c.em}</span><div style="flex:1;min-width:0"><b style="display:block">${esc(st.c.n)}</b><small style="display:block">Dzień ${Math.min(st.today,st.N)}/${st.N} · od ${a.start}</small><div class="pb"><i style="width:${st.pct.toFixed(0)}%"></i></div></div>
+      ${ui.chStop===i?`<button type="button" class="sbtn" data-act="chStopYes" data-i="${i}" style="color:var(--hd)">Przerwij</button><button type="button" class="sbtn" data-act="chStopNo">Nie</button>`:`<button type="button" class="sbtn" data-act="chStop" data-i="${i}">⋯</button>`}</div>`});
+  const done=S.chalDone||[];
+  if(done.length) h+=`<div class="muted" style="font-size:12px;margin-top:8px">Ukończone: ${done.filter(x=>x.ok).length} · wszystkie podjęte: ${done.length}</div>`;
+  const cats=[...new Set(CHL.map(c=>c.cat))];
+  for(const cat of cats){h+=`<div class="chcat">${cat}</div><div class="chg">`;
+    for(const c of CHL.filter(x=>x.cat===cat)){const act=(S.chal||[]).some(a=>a.id===c.id),wins=done.filter(x=>x.id===c.id&&x.ok).length;
+      h+=`<div class="cht${act?' on':''}"><span class="em" style="filter:none;opacity:1">${c.em}</span><b>${esc(c.n)}</b><small>${esc(c.d)}</small><small>${typeof c.days==='function'?'do końca okresu':c.days+' '+(c.days===1?'dzień':'dni')}${wins?` · 🏆×${wins}`:''}</small>
+        ${act?'<small style="color:var(--accent);font-weight:700">Aktywne</small>':`<button type="button" class="sbtn acc" data-act="chStart" data-id="${c.id}" style="margin-top:4px">Start</button>`}</div>`}
+    h+=`</div>`}
+  return h;
+}
+
 function viewHistory(){
-  if(!SESS.length) return `<h2>Historia</h2><div class="empty">Brak zapisanych treningów.<br>Zakończ pierwszy trening, a pojawi się tutaj razem z wersjami i ciężarami.</div>`;
-  let html=`<h2>Historia</h2><div class="seg" role="group"><button type="button" data-act="hview" data-v="list" aria-pressed="${ui.hview!=='rec'}">Treningi</button><button type="button" data-act="hview" data-v="rec" aria-pressed="${ui.hview==='rec'}">Regeneracja</button><button type="button" data-act="hview" data-v="ch" aria-pressed="${ui.hview==='ch'}">Wyzwania</button></div>`;
+  let html=`<h2>Historia</h2><div class="seg" role="group"><button type="button" data-act="hview" data-v="list" aria-pressed="${!ui.hview||ui.hview==='list'}">Treningi</button><button type="button" data-act="hview" data-v="rec" aria-pressed="${ui.hview==='rec'}">Regeneracja</button><button type="button" data-act="hview" data-v="ch" aria-pressed="${ui.hview==='ch'}">Wyzwania</button></div>`;
+  if(!SESS.length&&ui.hview!=='ch') return html+`<div class="empty">Brak zapisanych treningów.<br>Zakończ pierwszy trening, a pojawi się tutaj razem z wersjami i ciężarami.</div>`;
   if(ui.hview==='rec') return html+viewRecovery();
-  if(ui.hview==='ch') return html+viewChallenges();
+  if(ui.hview==='ch') return html+viewChLibrary()+viewChallenges();
   const exIds=[...new Set(SESS.flatMap(s=>s.items.map(i=>i.exId)))];
   html+=`<details${ui.hchart?' open':''}><summary>Postępy ćwiczeń</summary><div style="display:flex;flex-direction:column;gap:14px;margin-top:10px">`;
   for(const id of exIds){
@@ -1465,7 +1566,8 @@ function viewHistory(){
       const l=ent[ent.length-1], best=Math.max(...ent.map(x=>x.kg));
       return `<tr><td>${vBadge(v)}</td><td>${showKg(id,l.kg)}${effKg(id,l.kg,l.bw||null)!==null?` <span class="muted">(${fmt(effKg(id,l.kg,l.bw||null))})</span>`:''}</td><td>${showKg(id,best)}</td><td>${ent.length}</td><td>${dstr(l.d)}</td></tr>`;
     }).join('');
-    if(rows) html+=`<div><button type="button" class="ex-name" data-act="hchart" data-ex="${id}">${esc(exName(id))}</button>${ui.hchart===id?chartSVG(id,(ui.chartVer||{})[id]||'HD'):''}<div class="tbl"><table><thead><tr><th>Wersja</th><th>Ostatnio</th><th>Rekord</th><th>Razy</th><th>Data</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+    const er=e1rmInfo(id);
+    if(rows) html+=`<div><button type="button" class="ex-name" data-act="hchart" data-ex="${id}">${esc(exName(id))}</button>${er?`<div class="muted" style="font-size:12px;margin:-2px 0 4px">e1RM <b style="color:var(--fg)">${Math.round(er.last)} kg</b> · rekord ${Math.round(er.best)} kg${er.chg!==null?` · <span style="color:${er.chg>=0?'var(--accent)':'var(--hd)'}">${er.chg>=0?'+':''}${er.chg.toFixed(1).replace('.',',')}% w 8 tyg.</span>`:''}</div>`:''}${ui.hchart===id?chartSVG(id,(ui.chartVer||{})[id]||'HD')+e1rmChart(id):''}<div class="tbl"><table><thead><tr><th>Wersja</th><th>Ostatnio</th><th>Rekord</th><th>Razy</th><th>Data</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   }
   html+=`</div></details>`;
   for(let k=SESS.length-1;k>=0;k--){const s=SESS[k], prs=sessPRs(k), ld=sessLoad(s);
@@ -1743,6 +1845,15 @@ document.addEventListener('click',e=>{
     case 'beepCh': S.settings.beepCh=el.dataset.v; persist(); break;
     case 'beepTest': beepTriple(880); return;
     case 'chTab': ui.chCat=el.dataset.v; break;
+    case 'chOpen': tab='history'; ui={hview:'ch'}; render(); window.scrollTo(0,0); return;
+    case 'chStart': {S.chal=S.chal||[]; if(!S.chal.some(a=>a.id===el.dataset.id)){S.chal.push({id:el.dataset.id,start:isoDay(Date.now()),log:{}}); persist(); toast('Start! Wyzwanie pojawi się na ekranie Trening')} break}
+    case 'chStop': ui.chStop=+el.dataset.i; break;
+    case 'chStopNo': ui.chStop=null; break;
+    case 'chStopYes': chFinish(+el.dataset.i,true); ui.chStop=null; break;
+    case 'chDo': {const a=S.chal[+el.dataset.i],c=chDef(a.id),d=chDayIdx(a); a.log=a.log||{}; a.log[d]=chT(c,a,d); persist(); try{navigator.vibrate&&navigator.vibrate(60)}catch(_){}; break}
+    case 'chUndo': {const a=S.chal[+el.dataset.i]; delete a.log[chDayIdx(a)]; persist(); break}
+    case 'chAdd': {const i=+el.dataset.i,a=S.chal[i],c=chDef(a.id),d=chDayIdx(a),inp=document.getElementById('chv'+i),v=num(inp&&inp.value);
+      if(!(v>0)){toast('Wpisz ile');return} a.log=a.log||{}; a.log[d]=(+a.log[d]||0)+(c.u==='s'?Math.round(v):v); persist(); break}
     case 'dateToday': DRAFT.date=null; ui.dateEdit=false; draftSave(); break;
     case 'vpick': ui.vpick=ui.vpick===i?null:i; break;
     case 'setVer': {const it=DRAFT.items[i], v=el.dataset.v, n=S.cycles[it.key]||0, L=it.cy.length, idx=it.cy.indexOf(v);
