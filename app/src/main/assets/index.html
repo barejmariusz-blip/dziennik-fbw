@@ -1032,7 +1032,7 @@ const test=hinge=>({'Test Nogi':[['squat',1,'3-5 (test)',5],[hinge,1,'3-5 (test)
 const wk=(a,b,c)=>[a,0,b,0,c,0,'Mobilność'];
 const rep=(n,w)=>Array.from({length:n},()=>w);
 const TESTW=wk('Test Nogi','Test Klatka','Test Plecy');
-const BASE='Progresja podwójna: gdy zrobisz górę zakresu we wszystkich seriach, dokładasz ciężar. Tygodnie 4, 8 i 12 = deload (połowa serii, −10% ciężaru). Tydzień 13 = testy (szacowany 1RM z 3–5 powt.). Każdy trening kończy brzuch i rozciąganie, w niedzielę mobilność. Po teście przełącz na kolejny blok.';
+const BASE='Progresja podwójna liczona automatycznie: „Cel dziś” podnosi ciężar dopiero, gdy ostatnio zrobiłeś górę zakresu we wszystkich seriach. Tygodnie 4, 8 i 12 = deload (połowa serii, −10% ciężaru). Tydzień 13 = testy (szacowany 1RM z 3–5 powt.). Każdy trening kończy brzuch i rozciąganie, w niedzielę mobilność. Po teście przełącz na kolejny blok.';
 
 const sq=['squat',3,'10-12',5], rdl=['rdl',3,'10-12',5], fl=['flat',3,'10-12',2.5], row=['bbrow',3,'10-12',2.5];
 lpPlan('ay1','Rok · Blok 1 · Baza (tyg. 1–13)','Technika i objętość, 10–12 powt. Mezocykle M1/M2/M3 po 4 tygodnie, w każdym inne dodatki. '+BASE,{
@@ -1070,6 +1070,7 @@ lpPlan('ay4','Rok · Blok 4 · Objętość, góra/dół (tyg. 40–52)','4 dni: 
   'Dół B':[['hipthrust',4,'10',5],['legpress',3,'15',5],['bss',3,'10/noga',2],['seathamc',3,'12',2.5],['seatcalf',4,'15',5],...AB.C,...SD],
   ...test('dl'),'Mobilność':MOB},
   [...rep(12,['Góra A','Dół A',0,'Góra B','Dół B',0,'Mobilność']),TESTW]);
+for(const p of BUILTIN) if(/^ay\d/.test(p.id)) p.dp=true;
 }
 /* Kalistenika — dodatkowe warianty */
 lpPlan('kalmin','Kalistenika – minimalne wyposażenie','Full body bez sprzętu. Progresja przez trudniejsze warianty. 3 dni.',{FBW:[['pushup',3,'8-12',0],['bwsquat',3,'15-20',0],['lunge',3,'10',0],['plank',3,'30-60 s',0],['glutebr',3,'15',0],['bwcalf',3,'20',0]]},[['FBW',0,'FBW',0,'FBW',0,0]]);
@@ -1192,7 +1193,21 @@ function itemInc(it){return it&&it.inc!=null?Number(it.inc):Number(S.settings.in
 // when its previous execution was in an earlier block. N=1 = literal PDF rule (+inc on every return to a version).
 // Applies to every plan (linear plans have a 1-step cycle, so N=1 = +inc every session). N=0 = never add weight.
 function everyN(){const v=parseInt(S.settings.every,10);return isNaN(v)?4:Math.max(0,v)}
+// Double progression (plans with dp:true, e.g. the yearly Anatoly plan): weight goes up only after the last
+// session hit the top of the rep range in every set done at its heaviest weight; otherwise same weight, more reps.
+function repTop(r){r=String(r||'');if(/max|test|szczyt|\d\s*(s|m)\b/.test(r))return null;const m=r.match(/(\d+)(?:\s*-\s*(\d+))?/);return m?+(m[2]||m[1]):null}
+function lastItem(exId,ver){for(let i=SESS.length-1;i>=0;i--){if(SESS[i].noPlan)continue;const it=SESS[i].items.find(x=>x.exId===exId&&x.ver===ver);if(it&&it.sets.some(x=>!isNaN(x.kg)))return it}return null}
+function dpState(it){
+  if(!it||!plan().dp||TIMED.has(it.exId)||it.inc===0)return null;
+  const top=repTop(it.reps);if(top===null)return null;
+  const li=lastItem(it.exId,it.ver);if(!li)return null;
+  const ws=li.sets.filter(x=>!isNaN(x.kg)),mx=Math.max(...ws.map(x=>x.kg)),work=ws.filter(x=>x.kg===mx);
+  const need=Math.min(2,(it.sets&&it.sets.length)||(+it.sets)||2);
+  return {top,hit:work.length>=need&&work.every(x=>+x.reps>=top)};
+}
 function incFor(it){const base=itemInc(it);
+  if(it&&plan().dp&&/szczyt/.test(it.reps||'')) return base; // blok siłowy: +ciężar co trening na serii szczytowej
+  const dp=dpState(it); if(dp) return dp.hit?base:0;
   if(!it) return base; const N=everyN(); if(N===0) return 0;
   if(!it.cy) return base;
   const n=S.cycles[it.key]||0, L=it.cy.length; if(n<L) return base;
@@ -1379,7 +1394,7 @@ function viewToday(){
       <div class="target">
         <div>${!it.reps&&REP_OPTS[it.ver]?`<button type="button" class="rbtn" data-act="rpick" data-i="${idx}" aria-expanded="${ui.rpick===idx}"><div class="label">Powtórzenia ▾</div><div class="v">${(()=>{const r=repRange(it),st=repStats(it.ver),top=/max/.test(r)?null:Number(r.split('-').pop());return esc(repLabel(r))+(st&&top!==null&&top<st.max?` <span class="muted">(max ${st.max})</span>`:'')})()}</div></button>`:`<div class="label">Powtórzenia</div><div class="v">${esc(repRange(it))}</div>`}</div>
         <div><div class="label">Ostatnio ${it.ver}</div><div class="v">${last?showKg(it.exId,last.kg)+' × '+(isNaN(last.reps)?'?':last.reps)+rirTxt(last.rir):'—'}</div>${last?`<div class="muted">${dstr(last.date)}${effKg(it.exId,last.kg,last.bw||null)!==null?' · efektywnie '+fmt(effKg(it.exId,last.kg,last.bw||null))+' kg':''}</div>`:''}</div>
-        <div class="goal"><div class="label">Cel dziś${last&&!byReps&&incFor(it)===0?' · bez przyrostu':''}</div><div class="v">${byReps?(last?(last.kg&&!(TIMED.has(it.exId))?showKg(it.exId,last.kg)+' × ':'')+(isNaN(last.reps)?'?':(last.reps+1)+'+')+(TIMED.has(it.exId)?' s':''):'pierwszy raz'):goalTxt(it.exId,goal)}</div><div class="muted">${goal!==null&&effKg(it.exId,goal)!==null?'efektywnie '+fmt(effKg(it.exId,Math.min(goal,assistMode(it.exId)?0:goal)))+' kg · ':''}przerwa ${v.rest}</div></div>
+        <div class="goal"><div class="label">Cel dziś${last&&!byReps&&incFor(it)===0?(dpState(it)?' · dobij do '+dpState(it).top+' powt.':' · bez przyrostu'):(last&&dpState(it)?' · weszło '+dpState(it).top+' – dokładasz':'')}</div><div class="v">${byReps?(last?(last.kg&&!(TIMED.has(it.exId))?showKg(it.exId,last.kg)+' × ':'')+(isNaN(last.reps)?'?':(last.reps+1)+'+')+(TIMED.has(it.exId)?' s':''):'pierwszy raz'):goalTxt(it.exId,goal)}</div><div class="muted">${goal!==null&&effKg(it.exId,goal)!==null?'efektywnie '+fmt(effKg(it.exId,Math.min(goal,assistMode(it.exId)?0:goal)))+' kg · ':''}przerwa ${v.rest}</div></div>
       </div>
       ${ui.chart===idx?chartSVG(it.exId,(ui.chartVer||{})[it.exId]||it.ver):''}
       ${ui.rpick===idx?`<div class="vpick"><span class="muted">Zakres ${it.ver} dla tego ćwiczenia:</span>${REP_OPTS[it.ver].map(r=>`<button type="button" class="chip" data-act="rpickSet" data-i="${idx}" data-v="${r}" aria-pressed="${repRange(it)===r}">${repLabel(r)}</button>`).join('')}</div>`:''}
@@ -1866,7 +1881,7 @@ function dupPlan(src){
   const order=src.schedule?src.schedule.flat().filter(Boolean):(src.order||src.trNames);
   // collapse a 2-week schedule to the shortest repeating rotation
   let rot=order; for(let n=1;n<=order.length;n++){if(order.length%n===0&&order.every((t,i)=>t===order[i%n])){rot=order.slice(0,n);break}}
-  return {id:rid('p'),name:src.name+' (moja)',trNames:src.trNames.slice(),trainings:JSON.parse(JSON.stringify(src.trainings)),order:rot,note:src.note||''};
+  return {id:rid('p'),name:src.name+' (moja)',trNames:src.trNames.slice(),trainings:JSON.parse(JSON.stringify(src.trainings)),order:rot,note:src.note||'',dp:!!src.dp};
 }
 
 /* ---------- actions ---------- */
