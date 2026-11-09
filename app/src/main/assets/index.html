@@ -843,6 +843,22 @@ const EXTRA_ROWS=[
  ['h_ezrevcurl','Isometric reverse curl','Izometria zgięcia nachwytem','iso','przedramiona:1 biceps:.6',1],
  ['h_ropehammer','Isometric hammer curl','Izometria młotkowa – dłonie do siebie','iso','biceps:.8 przedramiona:.8',1],
  ['h_crosshammer','Isometric hammer curl','Izometria młotkowa – dłonie do siebie','iso','biceps:.8 przedramiona:.7',1],
+ /* plan roczny Anatoly Fit — brakujące ćwiczenia, brzuch i rozciąganie */
+ ['dbsplit','DB split squat','Przysiad wykroczny w miejscu z hantlami','knee','czworoglowe:1 posladki:.8 dwuglowe:.3',0],
+ ['dbneut','DB shoulder press neutralnie','Wyciskanie hantli nad głowę chwytem neutralnym (młotkowym)','vpush','barki:1 triceps:.5',0],
+ ['revpd','Reverse-grip pushdown','Prostowanie ramion na wyciągu górnym podchwytem','iso','triceps:1',0],
+ ['declpu','Pompki z nogami na ławce','Pompki z nogami opartymi wyżej na ławce','hpush','klatka:1 barki:.6 triceps:.5',1],
+ ['npull','Podciąganie wąsko','Podciąganie na drążku wąskim chwytem','vpull','plecy:1 biceps:.7 przedramiona:.3',1],
+ ['bbwrist','Behind-the-back wrist curl','Uginanie nadgarstków ze sztangą trzymaną za plecami','iso','przedramiona:1',0],
+ ['sideplank','Plank bokiem','Podpór bokiem na przedramieniu, ciało w linii','iso','brzuch:1',1],
+ ['deadbug','Dead bug','Leżąc na plecach naprzemiennie opuszczasz rękę i przeciwną nogę, lędźwie przy podłodze','iso','brzuch:1',1],
+ ['hollow','Hollow hold','Leżąc na plecach unosisz łopatki i nogi, lędźwie dociśnięte do podłogi','iso','brzuch:1',1],
+ ['st_lat','Lat stretch','Rozciąganie najszerszego grzbietu w zwisie lub w klęku przy ławce','iso','plecy:1',0],
+ ['st_tri','Overhead triceps stretch','Rozciąganie tricepsa – ręka zgięta za głową','iso','triceps:1',0],
+ ['st_bicep','Wall biceps stretch','Rozciąganie bicepsa – dłoń na ścianie, odwracasz tułów','iso','biceps:1',0],
+ ['st_forearm','Forearm stretch','Rozciąganie zginaczy i prostowników przedramienia','iso','przedramiona:1',0],
+ ['st_fdelt','Front delt stretch','Rozciąganie przodu barku – dłonie splecione za plecami','iso','barki:1',0],
+ ['st_tspine','T-spine foam roll','Odcinek piersiowy na wałku – wyprosty nad wałkiem','iso','plecy:1',0],
 ];
 const TIMED=new Set(['plank','hswall','tuckfl','pllean','lsit','deadhang','st_hams','st_quads','st_chest','st_delt','st_hipflex','st_glute','st_calf','st_child','st_cobra','st_dog','st_warrior','st_tree','st_side']);
 const MLOW={czworoglowe:'czworogłowe uda',dwuglowe:'dwugłowe uda',posladki:'pośladki',lydki:'łydki'};
@@ -997,6 +1013,64 @@ lpPlan('nlp','Novice Linear Progression','Proste, 3 dni. Każdy trening +2,5 kg 
 lpPlan('gslp','Greyskull LP','3 dni. Sztanga: Double Progression (reps potem waga). Akcesoria wg zaradności.',{Day1:[['flat',3,'5-8',2.5],['dl',2,'5',5],['bbrow',3,'5-8',2.5]],Day2:[['squat',3,'5-8',2.5],['ohp',3,'5-8',2.5],['pull',3,'5-8',0]]},[['Day1',0,'Day2',0,'Day1',0,0],['Day2',0,'Day1',0,'Day2',0,0]]);
 lpPlan('wsbs','WSBS (Westside dla Skinny Bastards)','Hipertrofia dla początkujących. 3 dni. Max effort + Dynamic + Supplemental.',{MaxE:[['squat',5,'3',2.5]],Dynamic:[['flat',8,'3',2.5]],Supp:[['legpress',3,'8-10',2.5],['bbrow',3,'8-10',2.5]]},[['MaxE',0,'Dynamic','Supp',0,0,0]]);
 lpPlan('icf','Ice Cream Fitness 5x5','4-dniowy 5×5 dla początkujących. Compound + accessories. +2,5 kg co tydzień co najmniej.',{Main:[['squat',5,'5',2.5],['flat',5,'5',2.5],['dl',1,'5',5],['ohp',5,'5',2.5]],Back:[['bbrow',5,'5',2.5],['pull',3,'max',0]],Acc:[['bbcurl',3,'8-10',0],['skull',3,'8-10',0],['dips',3,'max',0]]},[['Main',0,'Back','Acc',0,0,0]]);
+/* Plan roczny Anatoly Fit — 4 bloki po 13 tygodni (12 tyg. treningu + tydzień testowy).
+   Każdy trening kończy się brzuchem i rozciąganiem; niedziela = sesja mobilności. */
+for(const id of ['sideplank','hollow','st_lat','st_tri','st_bicep','st_forearm','st_fdelt','st_tspine']) TIMED.add(id);
+{
+const H='30-45 s';
+const AB={A:[['kneeraise',3,'10-15',0],['plank',3,'30-60 s',0],['sideplank',2,'30 s/str.',0]],
+          B:[['cablecrunch',3,'12-15',2.5],['pallof',3,'10/str.',0],['deadbug',3,'10/str.',0]],
+          B3:[['cablecrunch',4,'8-10',2.5],['pallof',3,'10/str.',0],['deadbug',3,'10/str.',0]],
+          C:[['abwheel',3,'6-12',0],['suitcase',3,'30 m/str.',2],['hollow',3,'20-40 s',0]]};
+const ST=ids=>ids.map(x=>[x,1,H,0]);
+const SN=ST(['st_hipflex','st_hams','st_glute','st_calf','st_delt']), SK=ST(['st_chest','st_tri','st_fdelt','st_tspine']),
+      SP=ST(['st_lat','st_bicep','st_forearm','st_child']), SG=ST(['st_chest','st_lat','st_tri','st_fdelt']), SD=ST(['st_hipflex','st_hams','st_glute','st_calf']);
+const MOB=[['st_cat',2,'10',0],['st_child',1,'60 s',0],['st_dog',2,'30 s',0],['st_hipflex',2,H,0],['st_hams',2,H,0],['st_glute',2,H,0],['st_chest',2,H,0],['st_tspine',1,'60 s',0],['st_cobra',2,'20 s',0]];
+const test=hinge=>({'Test Nogi':[['squat',1,'3-5 (test)',5],[hinge,1,'3-5 (test)',5],['ohp',1,'3-5 (test)',2.5],['plank',1,'max s',0],...SN],
+  'Test Klatka':[['flat',1,'3-5 (test)',2.5],['dips',2,'10',0],['pushup',1,'max',0],...SK],
+  'Test Plecy':[['pull',1,'max',0],['bbrow',2,'10',2.5],['bbcurl',2,'10',2.5],...SP]});
+const wk=(a,b,c)=>[a,0,b,0,c,0,'Mobilność'];
+const rep=(n,w)=>Array.from({length:n},()=>w);
+const TESTW=wk('Test Nogi','Test Klatka','Test Plecy');
+const BASE='Progresja podwójna: gdy zrobisz górę zakresu we wszystkich seriach, dokładasz ciężar. Tygodnie 4, 8 i 12 = deload (połowa serii, −10% ciężaru). Tydzień 13 = testy (szacowany 1RM z 3–5 powt.). Każdy trening kończy brzuch i rozciąganie, w niedzielę mobilność. Po teście przełącz na kolejny blok.';
+
+const sq=['squat',3,'10-12',5], rdl=['rdl',3,'10-12',5], fl=['flat',3,'10-12',2.5], row=['bbrow',3,'10-12',2.5];
+lpPlan('ay1','Rok · Blok 1 · Baza (tyg. 1–13)','Technika i objętość, 10–12 powt. Mezocykle M1/M2/M3 po 4 tygodnie, w każdym inne dodatki. '+BASE,{
+  'Nogi M1':[sq,rdl,['dbsplit',3,'10-12/noga',2],['legpress',3,'12',5],['dbneut',3,'10-12',2],['uprow',3,'12-15',2.5],['standcalf',3,'15-20',5],...AB.A,...SN],
+  'Klatka M1':[fl,['dbbench',3,'10-12',2],['dips',3,'10-12',0],['dbfly',3,'10-12',1],['revpd',3,'12',2.5],['dboh',3,'12',2],['pushup',2,'max',0],...AB.B,...SK],
+  'Plecy M1':[row,['npull',3,'max (cel 12)',0],['latpdv',3,'12',2.5],['sclose',3,'12',2.5],['facepull',3,'15',2.5],['bbcurl',3,'10-12',2.5],['hammer',3,'12',1],['bbwrist',3,'20',2.5],...AB.C,...SP],
+  'Nogi M2':[sq,rdl,['bss',3,'10-12/noga',2],['hamc',3,'12',2.5],['arnold',3,'10-12',2],['dbls',3,'12-15',1],['seatcalf',3,'15-20',5],...AB.A,...SN],
+  'Klatka M2':[fl,['dbincl',3,'10-12',2],['dips',3,'10-12',0],['crossover',3,'10-12',2.5],['ropepd',3,'12',2.5],['ohcable',3,'10-12',2.5],['diamondpu',2,'max',0],...AB.B,...SK],
+  'Plecy M2':[row,['pull',3,'max (cel 12)',0],['latpd',3,'12',2.5],['dbrow',3,'12',2],['revpec',3,'15',2.5],['dbcurl',3,'10-12',1],['ropehammer',3,'12',2.5],['farmer',3,'40 m',2],...AB.C,...SP],
+  'Nogi M3':[sq,rdl,['lunge',3,'10-12/noga',2],['hipthrust',3,'12',5],['dbneut',3,'10-12',2],['cls',3,'12-15',1.25],['lpcalf',3,'15-20',5],...AB.A,...SN],
+  'Klatka M3':[fl,['incl',3,'10-12',2.5],['dips',3,'10-12',0],['pecdeck',3,'10-12',2.5],['skull',3,'12',2.5],['cgbench',3,'10-12',2.5],['declpu',2,'max',0],...AB.B,...SK],
+  'Plecy M3':[row,['chin',3,'max (cel 12)',0],['latpdsa',3,'12',2.5],['tbar',3,'12',2.5],['facepull',3,'15',2.5],['preacher',3,'10-12',2.5],['revcurl',3,'12',2.5],['deadhang',3,'max s',0],...AB.C,...SP],
+  ...test('rdl'),'Mobilność':MOB},
+  [...rep(4,wk('Nogi M1','Klatka M1','Plecy M1')),...rep(4,wk('Nogi M2','Klatka M2','Plecy M2')),...rep(4,wk('Nogi M3','Klatka M3','Plecy M3')),TESTW]);
+
+lpPlan('ay2','Rok · Blok 2 · Siła i masa (tyg. 14–26)','Cięższe ciężary, główne ćwiczenia 4 serie po 6–8, dochodzi martwy ciąg. Co 4 tygodnie podmień dodatki na zamienniki (⇄). '+BASE,{
+  'Nogi':[['squat',4,'6-8',5],['dl',3,'5-6',5],['bss',3,'8-10/noga',2],['hamc',3,'10-12',2.5],['ohp',4,'6-8',2.5],['dbls',4,'12-15',1],['standcalf',4,'12-15',5],...AB.A,...SN],
+  'Klatka':[['flat',4,'6-8',2.5],['incl',3,'8-10',2.5],['dips',3,'8-10',2.5],['crossover',3,'12',2.5],['cgbench',3,'8-10',2.5],['skull',3,'10-12',2.5],['pushup',2,'max',0],...AB.B,...SK],
+  'Plecy':[['pull',4,'6-8',2.5],['bbrow',4,'6-8',2.5],['dbrow',3,'8-10',2],['latpd',3,'10-12',2.5],['facepull',3,'15',2.5],['bbcurl',3,'8-10',2.5],['hammer',3,'10-12',1],['farmer',3,'40 m',2],...AB.C,...SP],
+  ...test('dl'),'Mobilność':MOB},
+  [...rep(12,wk('Nogi','Klatka','Plecy')),TESTW]);
+
+const top='szczyt 3-5 · zjazd 5-6';
+lpPlan('ay3','Rok · Blok 3 · Siła (tyg. 27–39)','Seria szczytowa 1×3–5 (RIR 1) + 3 serie zjazdowe 5–6 ciężarem −10%, przerwy 3–4 min. Co tydzień +2,5 kg na szczycie (przysiad i martwy +5 kg). '+BASE,{
+  'Nogi':[['squat',4,top,5],['ohp',4,'5-6',2.5],['hipthrust',3,'8-10',5],['hamc',3,'8-10',2.5],['dbls',3,'12',1],['standcalf',3,'12',5],...AB.A,...SN],
+  'Klatka':[['flat',4,top,2.5],['dips',3,'6-8',2.5],['cgbench',3,'6-8',2.5],['crossover',2,'12',2.5],['pushd',2,'12',2.5],...AB.B3,...SK],
+  'Plecy':[['dl',3,top,5],['pull',4,'4-6',2.5],['bbrow',3,'6-8',2.5],['facepull',3,'15',2.5],['bbcurl',3,'8',2.5],['deadhang',2,'max s',0],...AB.C,...SP],
+  ...test('dl'),'Mobilność':MOB},
+  [...rep(12,wk('Nogi','Klatka','Plecy')),TESTW]);
+
+lpPlan('ay4','Rok · Blok 4 · Objętość, góra/dół (tyg. 40–52)','4 dni: pn Góra A, wt Dół A, czw Góra B, pt Dół B. W tyg. 2–3 mezocyklu ostatnia seria izolacji jako drop set albo rest-pause (nigdy w przysiadzie, martwym, wyciskaniu). '+BASE,{
+  'Góra A':[['dbincl',4,'8-10',2],['bbrow',4,'8-10',2.5],['ohps',3,'10-12',2.5],['latpd',3,'10-12',2.5],['dbcurl',3,'12-15',1],['pushd',3,'12-15',2.5],['facepull',3,'15',2.5],...SG],
+  'Dół A':[['squat',4,'8-10',5],['rdl',3,'10',5],['lunge',3,'12/noga',2],['hamc',3,'12-15',2.5],['standcalf',4,'15',5],...AB.A,...SD],
+  'Góra B':[['flat',4,'8-10',2.5],['pull',4,'max',0],['sclose',3,'12',2.5],['dbls',4,'15',1],['dips',3,'12',0],['hammer',3,'12',1],['wristcurl',2,'20',2.5],...AB.B,...SG],
+  'Dół B':[['hipthrust',4,'10',5],['legpress',3,'15',5],['bss',3,'10/noga',2],['seathamc',3,'12',2.5],['seatcalf',4,'15',5],...AB.C,...SD],
+  ...test('dl'),'Mobilność':MOB},
+  [...rep(12,['Góra A','Dół A',0,'Góra B','Dół B',0,'Mobilność']),TESTW]);
+}
 /* Kalistenika — dodatkowe warianty */
 lpPlan('kalmin','Kalistenika – minimalne wyposażenie','Full body bez sprzętu. Progresja przez trudniejsze warianty. 3 dni.',{FBW:[['pushup',3,'8-12',0],['bwsquat',3,'15-20',0],['lunge',3,'10',0],['plank',3,'30-60 s',0],['glutebr',3,'15',0],['bwcalf',3,'20',0]]},[['FBW',0,'FBW',0,'FBW',0,0]]);
 lpPlan('kalupp','Kalistenika – górna część','Push/Pull górna. 2-3 dni. Progresja: więcej reps, warianty trudniejsze, obciążenie.',{Push:[['pushup',4,'8-15',0],['diamondpu',3,'6-12',0],['pikepu',3,'8-12',0],['dips',3,'6-12',0]],Pull:[['pull',4,'5-12',0],['invrow',3,'10-15',0],['negpu',3,'3-5',0]]},[['Push',0,'Pull',0,'Push',0,'Pull',0]]);
@@ -1210,7 +1284,7 @@ function cardioCard(c,ci){
   </article>`;
 }
 function vBadge(v){return `<span class="vmini v-${v}">${v}</span>`}
-const PGROUPS=[['Moje plany',x=>!x.builtin],['SIŁA',x=>x.builtin&&!/^str|^yoga/.test(x.id)],['Początkujący',x=>['sl5x5','ss','gzclp','nlp','gslp','wsbs','icf'].includes(x.id)],['Zaawansowane',x=>['531','phul','ppl6','ul','gvt','hst','tm','madcow','arnold','dc','hd','a6w'].includes(x.id)],['Kalistenika',x=>['kal1','kal2','kal3','kalmin','kalupp','kalbody','kaliso'].includes(x.id)],['Cardio',x=>x.builtin&&/^c/.test(x.id)],['MOBILNOŚĆ',x=>x.builtin&&/^str|^yoga/.test(x.id)],['Stretching',x=>['strq','strf','strd'].includes(x.id)],['Joga',x=>['yogab','yogaf'].includes(x.id)]];
+const PGROUPS=[['Moje plany',x=>!x.builtin],['Plan roczny · Anatoly',x=>/^ay\d/.test(x.id)],['SIŁA',x=>x.builtin&&!/^str|^yoga/.test(x.id)],['Początkujący',x=>['sl5x5','ss','gzclp','nlp','gslp','wsbs','icf'].includes(x.id)],['Zaawansowane',x=>['531','phul','ppl6','ul','gvt','hst','tm','madcow','arnold','dc','hd','a6w'].includes(x.id)],['Kalistenika',x=>['kal1','kal2','kal3','kalmin','kalupp','kalbody','kaliso'].includes(x.id)],['Cardio',x=>x.builtin&&/^c/.test(x.id)],['MOBILNOŚĆ',x=>x.builtin&&/^str|^yoga/.test(x.id)],['Stretching',x=>['strq','strf','strd'].includes(x.id)],['Joga',x=>['yogab','yogaf'].includes(x.id)]];
 function viewOnboarding(){
   const sel=ui.onbPlan||S.activePlan, sp=allPlans().find(x=>x.id===sel)||plan();
   let h=`<section class="onb"><h2>Witaj w dzienniku</h2><p class="muted" style="margin:0">Dwa kroki i możesz trenować. Wszystko zmienisz potem w zakładce Plan.</p>
