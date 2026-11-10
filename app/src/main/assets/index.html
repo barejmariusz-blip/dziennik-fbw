@@ -124,6 +124,9 @@ button.day{border:1px solid var(--line);font:inherit;font-size:12px;font-weight:
 .set{display:grid;grid-template-columns:22px minmax(0,1fr) 14px minmax(0,1fr) 48px;gap:8px;align-items:center}
 .set .n{font-size:12px;font-weight:700;color:var(--muted);text-align:center;font-variant-numeric:tabular-nums}
 .set .x{color:var(--muted);text-align:center}
+.set.xs{grid-template-columns:22px minmax(0,1.3fr) 14px minmax(0,1fr) 44px 48px !important}
+.set.xs .xgo{min-width:0;width:100%}
+.set.xs .kgbox{grid-template-columns:minmax(0,1fr)} .set.xs .kgbox .stp{display:none}
 .inp{position:relative}
 .inp input{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:10px 34px 10px 10px;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
 .inp input::placeholder{color:var(--muted);opacity:.7;font-weight:500}
@@ -172,6 +175,8 @@ textarea{width:100%;min-height:90px;border:1px solid var(--line);background:var(
 .bar{height:5px;background:var(--surface2);border-radius:3px;margin-top:5px;overflow:hidden}
 .bar i{display:block;height:100%;background:var(--accent);width:0}
 .timer button{border:1px solid var(--line);background:var(--surface2);border-radius:9px;padding:8px 12px;font-weight:700}
+.timer.xt .t{color:var(--accent)} .timer.xt .t.lead{color:var(--hc)} .timer.xt .bar i{background:var(--hc)}
+.xgo{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:10px;min-width:44px;min-height:44px;font-weight:800;font-size:15px}
 nav.tabs{display:grid;grid-template-columns:repeat(3,1fr)}
 nav.tabs button{border:0;background:none;padding:12px 4px 10px;font-weight:700;font-size:13px;color:var(--muted);letter-spacing:.04em}
 nav.tabs button[aria-current="page"]{color:var(--fg);box-shadow:inset 0 3px 0 var(--accent)}
@@ -382,6 +387,12 @@ nav.tabs svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2
 <div class="dock">
   <div class="dock-in">
     <div class="ctimer" id="ctimer" hidden></div>
+    <div class="timer xt" id="xtimer" hidden>
+      <div class="t" id="xT">0:00</div>
+      <div class="info"><div id="xInfo">Ćwiczenie</div><div class="bar"><i id="xBar"></i></div></div>
+      <button type="button" id="xDone">Koniec</button>
+      <button type="button" id="xCancel">Anuluj</button>
+    </div>
     <div class="timer" id="timer" hidden>
       <div class="t" id="tT">0:00</div>
       <div class="info"><div id="tInfo">Przerwa</div><div class="bar"><i id="tBar"></i></div></div>
@@ -1398,13 +1409,14 @@ function viewToday(){
       </div>
       ${ui.chart===idx?chartSVG(it.exId,(ui.chartVer||{})[it.exId]||it.ver):''}
       ${ui.rpick===idx?`<div class="vpick"><span class="muted">Zakres ${it.ver} dla tego ćwiczenia:</span>${REP_OPTS[it.ver].map(r=>`<button type="button" class="chip" data-act="rpickSet" data-i="${idx}" data-v="${r}" aria-pressed="${repRange(it)===r}">${repLabel(r)}</button>`).join('')}</div>`:''}
-      <div class="sets">${it.sets.map((st,si)=>`<div class="set${st.done?' done':''}${(()=>{const k=num(st.kg),pb=bestBefore(it.exId,it.ver);return st.done&&!isNaN(k)&&isFinite(pb)&&k>pb?' pr':''})()}">
+      <div class="sets">${it.sets.map((st,si)=>`<div class="set${st.done?' done':''}${TIMED.has(it.exId)&&!st.done?' xs':''}${(()=>{const k=num(st.kg),pb=bestBefore(it.exId,it.ver);return st.done&&!isNaN(k)&&isFinite(pb)&&k>pb?' pr':''})()}">
         <span class="n">${si+1}</span>
         <div class="kgbox"><button type="button" class="stp" data-act="kgStep" data-d="-1" data-i="${idx}" data-s="${si}" aria-label="Mniej kg">−</button>
           <label class="inp"><input id="kg-${idx}-${si}" inputmode="decimal" autocomplete="off" aria-label="Ciężar seria ${si+1}" data-i="${idx}" data-s="${si}" data-f="kg" data-as="${assistMode(it.exId)?1:0}" value="${esc(kgShown(it.exId,st.kg))}" placeholder="${assistMode(it.exId)?(goal!==null?fmt(Math.max(0,-goal)):'asysta'):(goal!==null?fmt(goal):(e[4]?'0':'–'))}"><span>${assistMode(it.exId)?'as.':'kg'}</span></label>
           <button type="button" class="stp" data-act="kgStep" data-d="1" data-i="${idx}" data-s="${si}" aria-label="Więcej kg">+</button></div>
         <span class="x">×</span>
-        <label class="inp"><input id="rp-${idx}-${si}" inputmode="numeric" autocomplete="off" aria-label="Powtórzenia seria ${si+1}" data-i="${idx}" data-s="${si}" data-f="reps" value="${esc(st.reps)}" placeholder="${TIMED.has(it.exId)?'sek.':'pow.'}"><span></span></label>
+        <label class="inp"><input id="rp-${idx}-${si}" inputmode="numeric" autocomplete="off" aria-label="Powtórzenia seria ${si+1}" data-i="${idx}" data-s="${si}" data-f="reps" value="${esc(st.reps)}" placeholder="${TIMED.has(it.exId)?(xTarget(it,si)?.sec||'sek.'):'pow.'}"><span></span></label>
+        ${TIMED.has(it.exId)&&!st.done?`<button type="button" class="xgo" data-act="xStart" data-i="${idx}" data-s="${si}" aria-label="Start odliczania seria ${si+1}">▶</button>`:''}
         <button type="button" class="tick" data-act="tick" data-i="${idx}" data-s="${si}" aria-pressed="${st.done}" aria-label="Seria ${si+1} zrobiona">✓</button>
       </div>${st.done&&S.settings.rir!==false?`<div class="rir" role="group" aria-label="RIR seria ${si+1}"><span>RIR (zapas):</span>${['0','1','2','3','4'].map(r=>`<button type="button" data-act="rir" data-i="${idx}" data-s="${si}" data-v="${r}" aria-pressed="${String(st.rir)===r}">${r==='4'?'4+':r}</button>`).join('')}</div>`:''}`).join('')}</div>
       <div class="ex-foot"><button type="button" class="link" data-act="swap" data-i="${idx}">Zamienniki (${alts.length}) ${ui.swap===idx?'▴':'▾'}</button><span class="row"><button type="button" class="link" data-act="delSet" data-i="${idx}">– seria</button><button type="button" class="link" data-act="addSet" data-i="${idx}">+ seria</button></span></div>
@@ -1812,6 +1824,55 @@ function beepTriple(f){beep(f,260);setTimeout(()=>beep(f,260),380);setTimeout(()
 /* native rest alarm: beeps and counts down in the notification bar even with the screen off */
 function restNative(){try{if(!window.Android||!Android.restStart)return; if(!T){Android.restStop();return}
   Android.restStart(T.start,T.min,T.max,'Przerwa '+T.lbl+': '+T.txt,beepVol()/100,S.settings.beepCh!=='media')}catch(e){}}
+/* ---------- exercise timer (plank, stretching…): 3 s to get set, then counts the target time down ---------- */
+let X=null, xInt=null;
+function xParse(r){r=String(r||'');if(/max/.test(r))return {lo:null,hi:null,two:/str/.test(r)};const m=r.match(/(\d+)(?:\s*-\s*(\d+))?\s*s/);return m?{lo:+m[1],hi:+(m[2]||m[1]),two:/\/\s*str/.test(r)}:{lo:null,hi:null,two:false}}
+function xTarget(it,si){
+  if(!it||!TIMED.has(it.exId)) return null;
+  const p=xParse(it.reps), st=it.sets[si], own=parseInt(st&&st.reps,10);
+  if(own>0) return {sec:own,two:p.two};
+  const l=lastFor(it.exId,it.ver), lr=l?parseInt(l.reps,10):NaN;
+  if(lr>0){const nx=/^st_/.test(it.exId)?lr:lr+5; return {sec:p.hi?Math.min(Math.max(nx,p.lo||0),p.hi):nx,two:p.two}}
+  return p.lo?{sec:p.lo,two:p.two}:{sec:null,two:p.two};
+}
+function xStart(i,si){
+  const it=DRAFT.items[i], t=xTarget(it,si)||{sec:null,two:false};
+  restOff(); X={i,si,sec:t.sec,two:t.two,t0:Date.now(),lead:3,phase:1,beeped:{}};
+  keepAwake(); try{actx=actx||new (window.AudioContext||window.webkitAudioContext)()}catch(e){}
+  $('#xtimer').hidden=false; clearInterval(xInt); xInt=setInterval(xTick,200); xTick();
+}
+function xTick(){
+  if(!X) return;
+  const it=DRAFT&&DRAFT.items[X.i]; if(!it){xOff();return}
+  const el=Date.now()-X.t0, nm=exName(it.exId)+' · seria '+(X.si+1)+(X.two?(X.phase===1?' · strona 1':' · strona 2'):'');
+  if(el<X.lead*1000){const r=Math.ceil(X.lead-el/1000);$('#xT').textContent=r;$('#xT').className='t lead';$('#xInfo').textContent='Ustaw się… '+nm;$('#xBar').style.width='0%';
+    if(!X.beeped['l'+r]){X.beeped['l'+r]=1;beep(660,120)} return}
+  const s=Math.floor((el-X.lead*1000)/1000);
+  if(!X.beeped.go){X.beeped.go=1;beep(990,300)}
+  if(X.sec){const left=X.sec-s;
+    $('#xT').textContent=Math.floor(Math.max(0,left)/60)+':'+String(Math.max(0,left)%60).padStart(2,'0');$('#xT').className='t';
+    $('#xInfo').textContent=nm+' · cel '+X.sec+' s';$('#xBar').style.width=Math.min(100,s/X.sec*100)+'%';
+    if(left<=3&&left>0&&!X.beeped['c'+left]){X.beeped['c'+left]=1;beep(880,90)}
+    if(left<=0) xPhaseEnd(X.sec);
+  }else{
+    $('#xT').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');$('#xT').className='t';
+    $('#xInfo').textContent=nm+' · na maksa – stuknij Koniec';$('#xBar').style.width='100%';
+  }
+}
+function xPhaseEnd(sec){
+  if(X.two&&X.phase===1){beepTriple(880);X.phase=2;X.first=sec;X.t0=Date.now();X.lead=5;X.beeped={};toast('Zmiana strony');return}
+  xFinish(X.two&&X.first!=null?Math.min(X.first,sec):sec);
+}
+function xFinish(sec){
+  const {i,si}=X, it=DRAFT.items[i], st=it&&it.sets[si]; xOff(); beepTriple(880);
+  if(!st) return;
+  if(sec>0) st.reps=String(sec);
+  if(!st.done){if(st.kg===''&&loadKind(it.exId)) st.kg='0'; st.done=true; startTimer(it,i)}
+  draftSave(); render();
+}
+function xOff(){X=null;clearInterval(xInt);$('#xtimer').hidden=true}
+$('#xDone').addEventListener('click',()=>{if(!X)return;const el=Date.now()-X.t0-X.lead*1000;if(el<0){xOff();return}xPhaseEnd(Math.floor(el/1000))});
+$('#xCancel').addEventListener('click',xOff);
 function restOff(){T=null;clearInterval(tInt);$('#timer').hidden=true;restNative()}
 // Rest per exercise in double-progression plans (yearly plan); other plans keep the rest of their version (HD/VC/HC/VD/LP).
 const MAIN_LIFTS=new Set(['squat','smithsq','hacksq','pendsq','frontsq','flat','smithbench','machcp','bbrow','rdl','dbrdl','dl','tbdl','ohp','ohps','smithohp','pull','chin','npull']);
@@ -1826,8 +1887,22 @@ function restOf(it){
   if(pat&&pat!=='iso') return {txt:'90 s',min:90,max:120,lbl:'wielostawowe'};
   return {txt:'60 s',min:60,max:90,lbl:'izolacja'};
 }
-function startTimer(it){
-  const v=restOf(it); T={start:Date.now(),min:v.min,max:v.max,lbl:v.lbl,txt:v.txt,b1:false,b2:false};
+// rest after the LAST set of an exercise = moving to the next exercise (longer than between sets; short inside abs/stretch blocks)
+function transOf(it,i){
+  if(!it||i==null||!DRAFT||!it.sets.every(x=>x.done)) return null;
+  let j=i+1; while(j<DRAFT.items.length&&DRAFT.items[j].sets.every(x=>x.done)) j++;
+  const nx=DRAFT.items[j]; if(!nx) return {none:true};
+  const st=x=>/^st_/.test(x.exId), ab=x=>(musclesMap(x.exId).brzuch||0)>=1||x.exId==='suitcase', to=' → '+exName(nx.exId);
+  if(st(it)&&st(nx)) return {txt:'10 s',min:10,max:15,lbl:'zmiana pozycji'+to};
+  if(st(nx)) return {txt:'30 s',min:30,max:45,lbl:'na rozciąganie'+to};
+  if(ab(it)&&ab(nx)) return {txt:'45 s',min:45,max:60,lbl:'brzuch'+to};
+  if(ab(nx)) return {txt:'60 s',min:60,max:90,lbl:'na brzuch'+to};
+  const v=restOf(it); if(v.min>=120) return {txt:'2–3 min',min:Math.max(120,v.min),max:Math.max(180,v.max),lbl:'zmiana ćwiczenia'+to};
+  return {txt:'2 min',min:120,max:150,lbl:'zmiana ćwiczenia'+to};
+}
+function startTimer(it,i){
+  const tr=transOf(it,i); if(tr&&tr.none){restOff();return}
+  const v=tr||restOf(it); T={start:Date.now(),min:v.min,max:v.max,lbl:v.lbl,txt:v.txt,b1:false,b2:false};
   try{actx=actx||new (window.AudioContext||window.webkitAudioContext)()}catch(e){}
   $('#timer').hidden=false; clearInterval(tInt); tInt=setInterval(tick,250); tick(); restNative();
   if(!S.settings.notifAsked&&window.Android&&Android.notifyState&&Android.notifyState()==='ask'){S.settings.notifAsked=true;lsSave();Android.askNotify()}
@@ -1967,10 +2042,11 @@ document.addEventListener('click',e=>{
       else st.kg=fmt(Math.max(0,base+inc*(+el.dataset.d)));
       draftSave(); break}
     case 'tick': {const it=DRAFT.items[i], st=it.sets[+el.dataset.s];
-      if(!st.done){ if(st.kg===''){const g=goalFor(it.exId,it.ver,incFor(it)); if(g!==null) st.kg=(assistMode(it.exId)&&g>0)?'0':fmt(g); else if(loadKind(it.exId)) st.kg='0'} st.done=true; startTimer(it); keepAwake();
+      if(!st.done){ if(st.kg===''){const g=goalFor(it.exId,it.ver,incFor(it)); if(g!==null) st.kg=(assistMode(it.exId)&&g>0)?'0':fmt(g); else if(loadKind(it.exId)) st.kg='0'} st.done=true; startTimer(it,i); keepAwake();
         if(!DRAFT.startedAt&&!DRAFT.hinted){DRAFT.hinted=1;toast('Licznik treningu stoi. Włącz go przyciskiem Rozpocznij.')} }
       else st.done=false;
       draftSave(); break}
+    case 'xStart': xStart(i,+el.dataset.s); break;
     case 'rir': {const st=DRAFT.items[i].sets[+el.dataset.s]; st.rir=String(st.rir)===el.dataset.v?'':el.dataset.v; draftSave(); break}
     case 'rirOn': S.settings.rir=el.dataset.v==='1'; persist(); break;
     case 'sumClose': ui.summary=null; break;
