@@ -126,6 +126,8 @@ button.day{border:1px solid var(--line);font:inherit;font-size:12px;font-weight:
 .set .x{color:var(--muted);text-align:center}
 .set.xs{grid-template-columns:22px minmax(0,1.3fr) 14px minmax(0,1fr) 44px 48px !important}
 .set.xs .xgo{min-width:0;width:100%}
+#xFail[aria-pressed="true"]{background:var(--hd);border-color:var(--hd);color:#fff}
+#xtimer{flex-wrap:wrap;row-gap:8px} #xtimer .info{flex:1 1 0} .xbtns{display:flex;gap:8px;width:100%} .xbtns button{flex:1}
 .set.xs .kgbox{grid-template-columns:minmax(0,1fr)} .set.xs .kgbox .stp{display:none}
 .inp{position:relative}
 .inp input{width:100%;border:1px solid var(--line);background:var(--bg);border-radius:9px;padding:10px 34px 10px 10px;font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
@@ -390,8 +392,9 @@ nav.tabs svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2
     <div class="timer xt" id="xtimer" hidden>
       <div class="t" id="xT">0:00</div>
       <div class="info"><div id="xInfo">Ćwiczenie</div><div class="bar"><i id="xBar"></i></div></div>
+      <div class="xbtns"><button type="button" id="xFail" aria-pressed="false">Do upadku</button>
       <button type="button" id="xDone">Koniec</button>
-      <button type="button" id="xCancel">Anuluj</button>
+      <button type="button" id="xCancel">Anuluj</button></div>
     </div>
     <div class="timer" id="timer" hidden>
       <div class="t" id="tT">0:00</div>
@@ -1837,7 +1840,8 @@ function xTarget(it,si){
 }
 function xStart(i,si){
   const it=DRAFT.items[i], t=xTarget(it,si)||{sec:null,two:false};
-  restOff(); X={i,si,sec:t.sec,two:t.two,t0:Date.now(),lead:3,phase:1,beeped:{}};
+  restOff(); X={i,si,sec:t.sec,two:t.two,t0:Date.now(),lead:3,phase:1,beeped:{},fail:t.sec==null||!!(S.xFail||{})[it.exId]};
+  $('#xFail').setAttribute('aria-pressed',String(X.fail)); $('#xFail').hidden=t.sec==null;
   keepAwake(); try{actx=actx||new (window.AudioContext||window.webkitAudioContext)()}catch(e){}
   $('#xtimer').hidden=false; clearInterval(xInt); xInt=setInterval(xTick,200); xTick();
 }
@@ -1849,7 +1853,12 @@ function xTick(){
     if(!X.beeped['l'+r]){X.beeped['l'+r]=1;beep(660,120)} return}
   const s=Math.floor((el-X.lead*1000)/1000);
   if(!X.beeped.go){X.beeped.go=1;beep(990,300)}
-  if(X.sec){const left=X.sec-s;
+  if(X.fail){
+    $('#xT').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');$('#xT').className='t'+(X.sec&&s>=X.sec?' ready':'');
+    $('#xInfo').textContent=nm+(X.sec?(s>=X.sec?' · cel '+X.sec+' s ✓ trzymaj!':' · cel '+X.sec+' s'):'')+' · do upadku';
+    $('#xBar').style.width=X.sec?Math.min(100,s/X.sec*100)+'%':'100%';
+    if(X.sec&&s>=X.sec&&!X.beeped.goal){X.beeped.goal=1;beepTriple(990)}
+  }else if(X.sec){const left=X.sec-s;
     $('#xT').textContent=Math.floor(Math.max(0,left)/60)+':'+String(Math.max(0,left)%60).padStart(2,'0');$('#xT').className='t';
     $('#xInfo').textContent=nm+' · cel '+X.sec+' s';$('#xBar').style.width=Math.min(100,s/X.sec*100)+'%';
     if(left<=3&&left>0&&!X.beeped['c'+left]){X.beeped['c'+left]=1;beep(880,90)}
@@ -1873,6 +1882,7 @@ function xFinish(sec){
 function xOff(){X=null;clearInterval(xInt);$('#xtimer').hidden=true}
 $('#xDone').addEventListener('click',()=>{if(!X)return;const el=Date.now()-X.t0-X.lead*1000;if(el<0){xOff();return}xPhaseEnd(Math.floor(el/1000))});
 $('#xCancel').addEventListener('click',xOff);
+$('#xFail').addEventListener('click',()=>{if(!X)return;const it=DRAFT.items[X.i];X.fail=!X.fail;S.xFail=Object.assign({},S.xFail,{[it.exId]:X.fail});persist();$('#xFail').setAttribute('aria-pressed',String(X.fail));xTick()});
 function restOff(){T=null;clearInterval(tInt);$('#timer').hidden=true;restNative()}
 // Rest per exercise in double-progression plans (yearly plan); other plans keep the rest of their version (HD/VC/HC/VD/LP).
 const MAIN_LIFTS=new Set(['squat','smithsq','hacksq','pendsq','frontsq','flat','smithbench','machcp','bbrow','rdl','dbrdl','dl','tbdl','ohp','ohps','smithohp','pull','chin','npull']);
