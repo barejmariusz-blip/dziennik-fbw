@@ -1218,14 +1218,40 @@ const EX_FAMILY=[
  ['crunch','machcrunch','cablecrunch'],
 ];
 const famOf=id=>EX_FAMILY.find(g=>g.includes(id))||null;
-// last working weight: exact exercise first, then the same movement on other equipment (same version)
-function lastFor(exId,ver){
-  const find=pred=>{for(let i=SESS.length-1;i>=0;i--){if(SESS[i].noPlan) continue; const it=SESS[i].items.find(pred);
-    if(it){let best=null;for(const s of it.sets){if(!isNaN(s.kg)&&(best===null||s.kg>best.kg||(s.kg===best.kg&&s.reps>best.reps)))best=s}
-      if(best) return {kg:best.kg,reps:best.reps,rir:best.rir,date:SESS[i].date,bw:SESS[i].bw}}}
-    return null};
-  const fam=famOf(exId);
-  return find(x=>x.exId===exId&&x.ver===ver) || (fam? find(x=>x.ver===ver&&fam.includes(x.exId)) : null);
+// cosine similarity of two exercises' muscle profiles
+function musCos(a,b){const A=musclesMap(a),B=musclesMap(b);let dot=0,na=0,nb=0;for(const k in A){na+=A[k]*A[k];if(B[k])dot+=A[k]*B[k]}for(const k in B)nb+=B[k]*B[k];return na&&nb?dot/Math.sqrt(na*nb):0}
+// exercises that can stand in for exId when it has no history: same movement group, or same pattern + very similar muscles
+function similarIds(exId){
+  const e=EXA(exId); if(!e) return [];
+  const fam=famOf(exId)||[];
+  return allExIds().filter(id=>id!==exId&&!/^(h_|c_|st_)/.test(id)&&EXA(id)&&EXA(id)[1]===e[1]&&!!EXA(id)[4]===!!e[4])
+    .map(id=>({id,sim:fam.includes(id)?1:musCos(exId,id)})).filter(x=>x.sim>=0.8).sort((a,b)=>b.sim-a.sim).map(x=>x.id);
+}
+// planned reps for today = last number in the rep range (e.g. "3 × 12" -> 12, "8-12" -> 12)
+function targetReps(it){const m=(repRange(it)||'').match(/\d+/g);return m?+m[m.length-1]:null}
+// last working set for an exercise. Order: same exercise (any version) -> most similar exercises.
+// Within the chosen pool, the set with reps closest to `target` wins (60 kg x 15 beats 80 kg x 1 for a target of 12).
+function lastFor(exId,ver,target){
+  const pool=ids=>{const out=[];for(let i=SESS.length-1;i>=0;i--){if(SESS[i].noPlan)continue;
+    for(const it of SESS[i].items){if(!ids.includes(it.exId))continue;
+      for(const x of it.sets){if(!isNaN(x.kg))out.push({kg:x.kg,reps:x.reps,rir:x.rir,date:SESS[i].date,bw:SESS[i].bw,src:it.exId,ver:it.ver})}}}
+    return out};
+  const levels=[[exId], similarIds(exId)];
+  for(const ids of levels){
+    if(!ids.length) continue;
+    const cands=pool(ids);
+    if(!cands.length) continue;
+    const dist=c=>target==null||isNaN(parseInt(c.reps,10))?0:Math.abs(parseInt(c.reps,10)-target);
+    let best=null;
+    for(const c of cands){
+      if(!best){best=c;continue}
+      const d1=dist(c), d0=dist(best);
+      if(target==null){ if(c.kg>best.kg||(c.kg===best.kg&&(c.reps||0)>(best.reps||0))) best=c; continue }
+      if(d1<d0||(d1===d0&&((c.ver===ver)&&best.ver!==ver))) best=c;
+    }
+    return {kg:best.kg,reps:best.reps,rir:best.rir,date:best.date,bw:best.bw,src:best.src};
+  }
+  return null;
 }
 function repRange(it){if(it.reps)return it.sets.length+' × '+it.reps;if(!REP_OPTS[it.ver])return (VERS[it.ver]||VERS.LP).reps;return S.repPick[it.exId+'|'+it.ver]||REP_DEF[it.ver]}
 function itemInc(it){return it&&it.inc!=null?Number(it.inc):Number(S.settings.inc||1.25)}
@@ -1414,7 +1440,7 @@ function viewToday(){
   }
   const recNow=SESS.length?Object.fromEntries(recovery().map(r=>[r.m,r])):null;
   DRAFT.items.forEach((it,idx)=>{
-    const e=EXA(it.exId)||['?','iso','','',0], v=VERS[it.ver]||VERS.LP, last=lastFor(it.exId,it.ver), goal=last?last.kg+incFor(it):null, byReps=it.inc===0;
+    const e=EXA(it.exId)||['?','iso','','',0], v=VERS[it.ver]||VERS.LP, last=lastFor(it.exId,it.ver,targetReps(it)), goal=last?last.kg+incFor(it):null, byReps=it.inc===0;
     const cyc=it.cy.map(x=>`<b class="${x===it.ver?'cur':''}">${x}</b>`).join('<span>›</span>');
     const alts=alternativesFor(it.exId).slice(0,24);
     const vid=exVideo(it.exId);
@@ -1433,7 +1459,7 @@ function viewToday(){
       ${ui.legend===idx?`<div class="legend"><div><b>HD</b><span>najciężej, mało powtórzeń (1-5), przerwa 2–3 min</span></div><div><b>HC</b><span>ciężko, 1-6 powtórzeń, przerwa 2–3 min</span></div><div><b>VC</b><span>średnio, 6-10 powtórzeń, przerwa 1–2 min</span></div><div><b>VD</b><span>lżej, więcej powtórzeń (6-20), przerwa 1 min</span></div><span class="muted">Co trening ćwiczenie przechodzi na kolejną wersję. Ciężar rośnie zgodnie z ustawieniem „Dodawaj ciężar co … treningów”.</span></div>`:''}
       <div class="target">
         <div>${!it.reps&&REP_OPTS[it.ver]?`<button type="button" class="rbtn" data-act="rpick" data-i="${idx}" aria-expanded="${ui.rpick===idx}"><div class="label">Powtórzenia ▾</div><div class="v">${(()=>{const r=repRange(it),st=repStats(it.ver),top=/max/.test(r)?null:Number(r.split('-').pop());return esc(repLabel(r))+(st&&top!==null&&top<st.max?` <span class="muted">(max ${st.max})</span>`:'')})()}</div></button>`:`<div class="label">Powtórzenia</div><div class="v">${esc(repRange(it))}</div>`}</div>
-        <div><div class="label">Ostatnio ${it.ver}</div><div class="v">${last?showKg(it.exId,last.kg)+' × '+(isNaN(last.reps)?'?':last.reps)+rirTxt(last.rir):'—'}</div>${last?`<div class="muted">${dstr(last.date)}${effKg(it.exId,last.kg,last.bw||null)!==null?' · efektywnie '+fmt(effKg(it.exId,last.kg,last.bw||null))+' kg':''}</div>`:''}</div>
+        <div><div class="label">Ostatnio ${it.ver}</div><div class="v">${last?showKg(it.exId,last.kg)+' × '+(isNaN(last.reps)?'?':last.reps)+rirTxt(last.rir):'—'}</div>${last?`<div class="muted">${dstr(last.date)}${last.src&&last.src!==it.exId?' · z: '+esc(exName(last.src)):''}${effKg(it.exId,last.kg,last.bw||null)!==null?' · efektywnie '+fmt(effKg(it.exId,last.kg,last.bw||null))+' kg':''}</div>`:''}</div>
         <div class="goal"><div class="label">Cel dziś${last&&!byReps&&incFor(it)===0?(dpState(it)?' · dobij do '+dpState(it).top+' powt.':' · bez przyrostu'):(last&&dpState(it)?' · weszło '+dpState(it).top+' – dokładasz':'')}</div><div class="v">${byReps?(last?(last.kg&&!(TIMED.has(it.exId))?showKg(it.exId,last.kg)+' × ':'')+(isNaN(last.reps)?'?':(last.reps+1)+'+')+(TIMED.has(it.exId)?' s':''):'pierwszy raz'):goalTxt(it.exId,goal)}</div><div class="muted">${goal!==null&&effKg(it.exId,goal)!==null?'efektywnie '+fmt(effKg(it.exId,Math.min(goal,assistMode(it.exId)?0:goal)))+' kg · ':''}przerwa ${restOf(it).txt}</div></div>
       </div>
       ${ui.chart===idx?chartSVG(it.exId,(ui.chartVer||{})[it.exId]||it.ver):''}
