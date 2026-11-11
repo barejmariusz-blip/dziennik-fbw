@@ -1195,11 +1195,37 @@ function kgShown(exId,v){if(!assistMode(exId)||v==='')return v;const n=num(v);re
 function bestBefore(exId,ver,upto){let b=-Infinity;const n=upto==null?SESS.length:upto;for(let i=0;i<n;i++)if(!SESS[i].noPlan)for(const it of SESS[i].items)if(it.exId===exId&&it.ver===ver)for(const x of it.sets)if(!isNaN(x.kg)&&x.kg>b)b=x.kg;return b}
 function sessPRs(k){const s=SESS[k],out=[];for(const it of s.items){const prev=bestBefore(it.exId,it.ver,k);if(!isFinite(prev))continue;const m=Math.max(...it.sets.map(x=>isNaN(x.kg)?-Infinity:x.kg));if(isFinite(m)&&m>prev)out.push({exId:it.exId,ver:it.ver,kg:m,prev})}return out}
 function sessLoad(s){let sets=0,ton=0;for(const it of s.items)for(const x of it.sets){sets++;const kg=loadKind(it.exId)?effKg(it.exId,x.kg,s.bw||null):x.kg;if(kg>0&&x.reps>0)ton+=kg*x.reps}return {sets,ton}}
+// same movement on different equipment: they share working-weight history (squat <-> Smith squat, etc.)
+const EX_FAMILY=[
+ ['squat','smithsq','frontsq','hacksq','pendsq','goblet','bwsquat'],
+ ['flat','dbbench','smithbench','machcp'],
+ ['incl','dbincl','smithincl'],
+ ['bbrow','dbrow','crow1','csrow','tbar','machrow','sealrow'],
+ ['latpd','latpdv','latpdsa','machpd'],
+ ['rdl','dbrdl','sldl'],
+ ['dblh','dbls','cls','machlat','leanlat'],
+ ['bbcurl','ezcurl'],
+ ['pushd','ropepd','ohcable'],
+ ['skull','ezext','dboh'],
+ ['ohp','dbsw','dbsc','smithohp','machsp','arnold'],
+ ['fly','dbfly','pecdeck','crossover'],
+ ['glutebr','hipthrust'],
+ ['legext','sllegext'],
+ ['hamc','seathamc','standhamc'],
+ ['standcalf','seatcalf','smithseatcalf','lpcalf','calf'],
+ ['shrug','dbshrug','smithshrug','machshrug','cableshrug','tbshrug'],
+ ['hammer','ropehammer','crosshammer'],
+ ['crunch','machcrunch','cablecrunch'],
+];
+const famOf=id=>EX_FAMILY.find(g=>g.includes(id))||null;
+// last working weight: exact exercise first, then the same movement on other equipment (same version)
 function lastFor(exId,ver){
-  for(let i=SESS.length-1;i>=0;i--){if(SESS[i].noPlan) continue; const it=SESS[i].items.find(x=>x.exId===exId&&x.ver===ver);
+  const find=pred=>{for(let i=SESS.length-1;i>=0;i--){if(SESS[i].noPlan) continue; const it=SESS[i].items.find(pred);
     if(it){let best=null;for(const s of it.sets){if(!isNaN(s.kg)&&(best===null||s.kg>best.kg||(s.kg===best.kg&&s.reps>best.reps)))best=s}
       if(best) return {kg:best.kg,reps:best.reps,rir:best.rir,date:SESS[i].date,bw:SESS[i].bw}}}
-  return null;
+    return null};
+  const fam=famOf(exId);
+  return find(x=>x.exId===exId&&x.ver===ver) || (fam? find(x=>x.ver===ver&&fam.includes(x.exId)) : null);
 }
 function repRange(it){if(it.reps)return it.sets.length+' × '+it.reps;if(!REP_OPTS[it.ver])return (VERS[it.ver]||VERS.LP).reps;return S.repPick[it.exId+'|'+it.ver]||REP_DEF[it.ver]}
 function itemInc(it){return it&&it.inc!=null?Number(it.inc):Number(S.settings.inc||1.25)}
